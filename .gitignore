@@ -1,0 +1,29 @@
+# Python virtual environment and cache
+.venv/
+__pycache__/
+*.pyc
+.env
+
+# Android build outputs and local configurations
+athena-android/.gradle/
+athena-android/build/
+athena-android/app/build/
+athena-android/local.properties
+athena-android/.cxx/
+athena-android/captures/
+.externalNativeBuild/
+athena-android/app/src/main/assets/
+*.apk
+*.aar
+
+# System and IDE configurations
+.idea/
+.vscode/
+*.suo
+*.user
+*.userossc
+*.sln
+*.docstates
+Thumbs.db
+ehthumbs.db
+Desktop.ini

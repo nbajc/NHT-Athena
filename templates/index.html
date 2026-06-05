@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NHT Athena - Sovereignty Executive Console</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+    <div class="glass-bg-glow"></div>
+    
+    <div class="app-container">
+        <!-- HEADER -->
+        <header class="app-header">
+            <div class="brand">
+                <div class="logo-pulse"></div>
+                <h1>NHT ATHENA</h1>
+                <span class="version-tag">v1.2</span>
+            </div>
+            
+            <div class="sovereignty-badge">
+                <i class="fa-solid fa-shield-halved"></i>
+                <span>SOVEREIGNTY GUARDRAIL: ACTIVE</span>
+            </div>
+            
+            <div class="time-widget" id="time-widget">
+                <div class="time-item">
+                    <span class="label">LOCAL</span>
+                    <span class="value" id="local-time">00:00:00</span>
+                </div>
+                <div class="time-item border-left">
+                    <span class="label">BELGRADE</span>
+                    <span class="value" id="belgrade-time">00:00:00</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- MAIN 4-GRID LAYOUT -->
+        <main class="dashboard-grid">
+            
+            <!-- COLUMN 1: ATHENA CORE (Voice & Interface) -->
+            <section class="card athena-core-card">
+                <div class="card-header">
+                    <div class="icon-title">
+                        <i class="fa-solid fa-microphone-lines icon-purple"></i>
+                        <h2>Athena-Core Interface</h2>
+                    </div>
+                    <span class="badge purple">Sovereignty Executive</span>
+                </div>
+                <div class="card-body">
+                    <div class="voice-module">
+                        <p class="section-desc">Mobile dictation optimization & voice-first entry</p>
+                        
+                        <div class="wave-container">
+                            <canvas id="waveform-canvas"></canvas>
+                            <button class="mic-btn" id="mic-btn" title="Simulate Voice Input">
+                                <i class="fa-solid fa-microphone"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="dictation-input-group">
+                            <input type="text" id="dictation-input" placeholder="Type a verbal instruction or command..." autocomplete="off">
+                            <button class="send-btn" id="send-dictation-btn">
+                                <i class="fa-solid fa-paper-plane"></i>
+                            </button>
+                        </div>
+                        <div class="suggestions">
+                            <span class="suggest-chip" onclick="applySuggestion('Check current block status')">"Check status"</span>
+                            <span class="suggest-chip" onclick="applySuggestion('Approve Nathan Gmail draft')">"Approve Nathan draft"</span>
+                            <span class="suggest-chip" onclick="applySuggestion('Audit Belgrade timezone metrics')">"Audit Belgrade offsets"</span>
+                        </div>
+                    </div>
+
+                    <div class="pending-approvals-module">
+                        <h3><i class="fa-solid fa-user-check"></i> Pending Broadcast Approvals</h3>
+                        <div id="approvals-list" class="approvals-list">
+                            <!-- Populated by JS -->
+                            <div class="loading-placeholder">Loading pending items...</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- COLUMN 2: BRIEF-ORCHESTRATOR -->
+            <section class="card brief-orchestrator-card">
+                <div class="card-header">
+                    <div class="icon-title">
+                        <i class="fa-solid fa-calendar-day icon-blue"></i>
+                        <h2>Brief-Orchestrator</h2>
+                    </div>
+                    <span class="badge blue">State Engine</span>
+                </div>
+                <div class="card-body">
+                    <div class="brief-summary-box">
+                        <h3>Daily Briefing Synopsis</h3>
+                        <p id="brief-text">Loading latest daily brief synopsis from Gemini...</p>
+                    </div>
+                    
+                    <div class="timeline-module">
+                        <h3><i class="fa-solid fa-clock-rotate-left"></i> Persistent State Blocks</h3>
+                        <div class="timeline">
+                            <div class="timeline-item active" id="state-routine">
+                                <div class="timeline-badge routine"><i class="fa-solid fa-book-open"></i></div>
+                                <div class="timeline-content">
+                                    <div class="time-header">
+                                        <h4>Routine Block</h4>
+                                        <span class="time-pill">07:00 - 09:00 AM</span>
+                                    </div>
+                                    <p class="title">Dennis + Mama Exam Prep</p>
+                                    <span class="status-indicator success">Active Daily Loop</span>
+                                </div>
+                            </div>
+                            
+                            <div class="timeline-item" id="state-target">
+                                <div class="timeline-badge target"><i class="fa-solid fa-graduation-cap"></i></div>
+                                <div class="timeline-content">
+                                    <div class="time-header">
+                                        <h4>Target Block</h4>
+                                        <span class="time-pill">June 15 Target</span>
+                                    </div>
+                                    <p class="title">DE Recertification Tracking</p>
+                                    <span class="status-indicator warning">Workshops Check</span>
+                                </div>
+                            </div>
+                            
+                            <div class="timeline-item" id="state-anchor">
+                                <div class="timeline-badge anchor"><i class="fa-solid fa-cake-candles"></i></div>
+                                <div class="timeline-content">
+                                    <div class="time-header">
+                                        <h4>Anchor Block</h4>
+                                        <span class="time-pill">Sat, June 20 @ 09:00 AM</span>
+                                    </div>
+                                    <p class="title">Boja's 50th Birthday Walk</p>
+                                    <span class="status-indicator info">Scheduled</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- COLUMN 3: COMMS-DRAFT-ENGINE -->
+            <section class="card comms-draft-card">
+                <div class="card-header">
+                    <div class="icon-title">
+                        <i class="fa-solid fa-paperclip icon-teal"></i>
+                        <h2>Comms-Draft-Engine</h2>
+                    </div>
+                    <span class="badge teal">Headless Loop</span>
+                </div>
+                <div class="card-body">
+                    <div class="section-info">
+                        <p>Orchestrating drafts in a <strong>Draft & Pause</strong> sequence. Approved drafts transmit instantly.</p>
+                    </div>
+                    
+                    <div class="drafts-container" id="drafts-container">
+                        <!-- Populated by JS -->
+                        <div class="loading-placeholder">Loading drafts...</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- COLUMN 4: DEPLOYMENT-DEVOPS -->
+            <section class="card devops-card">
+                <div class="card-header">
+                    <div class="icon-title">
+                        <i class="fa-solid fa-server icon-amber"></i>
+                        <h2>Deployment-DevOps</h2>
+                    </div>
+                    <span class="badge amber">Pipeline & Infra</span>
+                </div>
+                <div class="card-body">
+                    <!-- Telemetry Summary -->
+                    <div class="telemetry-summary">
+                        <div class="tel-box">
+                            <span class="tel-label">SUPABASE</span>
+                            <span class="tel-value success-text" id="tel-supabase">CONNECTED</span>
+                        </div>
+                        <div class="tel-box">
+                            <span class="tel-label">LATENCY</span>
+                            <span class="tel-value" id="tel-latency">12ms</span>
+                        </div>
+                        <div class="tel-box">
+                            <span class="tel-label">BEHAVIORAL TEL</span>
+                            <span class="tel-value danger-text" id="tel-behavioral">STRIPPED</span>
+                        </div>
+                    </div>
+
+                    <!-- Telemetry Chart -->
+                    <div class="chart-container">
+                        <div class="chart-header">
+                            <h3>Connection Latency History (ms)</h3>
+                            <span class="chart-status"><i class="fa-solid fa-circle-nodes"></i> Zero Tracking Telemetry Asserted</span>
+                        </div>
+                        <div class="simulated-chart" id="latency-chart">
+                            <!-- Animated CSS/JS bars represent latency history -->
+                            <div class="chart-bar" style="height: 48%;"><span>12ms</span></div>
+                            <div class="chart-bar" style="height: 56%;"><span>14ms</span></div>
+                            <div class="chart-bar" style="height: 44%;"><span>11ms</span></div>
+                            <div class="chart-bar" style="height: 60%;"><span>15ms</span></div>
+                            <div class="chart-bar" style="height: 48%;"><span>12ms</span></div>
+                            <div class="chart-bar" style="height: 52%;"><span>13ms</span></div>
+                            <div class="chart-bar active" style="height: 48%;"><span>12ms</span></div>
+                        </div>
+                    </div>
+
+                    <!-- Staging & Git Workspace Tracking -->
+                    <div class="devops-git-workspace">
+                        <h3><i class="fa-solid fa-code-branch"></i> Repository Staging Build</h3>
+                        <div class="workspace-list">
+                            <div class="workspace-item">
+                                <span class="repo-name">NexusHestiaSearchEngine</span>
+                                <span class="repo-status success-text"><i class="fa-solid fa-circle-check"></i> Built</span>
+                            </div>
+                            <div class="workspace-item">
+                                <span class="repo-name">LlamaImageSorter</span>
+                                <span class="repo-status success-text"><i class="fa-solid fa-circle-check"></i> Built</span>
+                            </div>
+                            <div class="workspace-item">
+                                <span class="repo-name">TechnosomaticArtImageSearch</span>
+                                <span class="repo-status success-text"><i class="fa-solid fa-circle-check"></i> Built</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Environment Config State -->
+                    <div class="env-config-panel">
+                        <h3><i class="fa-solid fa-key"></i> Key Gateways Active</h3>
+                        <div class="keys-grid">
+                            <div class="key-item"><span class="key-name">Supabase</span><span class="key-val"><i class="fa-solid fa-check icon-green"></i></span></div>
+                            <div class="key-item"><span class="key-name">Google OAuth</span><span class="key-val"><i class="fa-solid fa-check icon-green"></i></span></div>
+                            <div class="key-item"><span class="key-name">Twilio WhatsApp</span><span class="key-val"><i class="fa-solid fa-check icon-green"></i></span></div>
+                            <div class="key-item"><span class="key-name">Serper Scraper</span><span class="key-val"><i class="fa-solid fa-check icon-green"></i></span></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- SYSTEM LOGS CONSOLE -->
+        <footer class="app-footer">
+            <div class="console-header">
+                <div class="console-title">
+                    <i class="fa-solid fa-terminal"></i>
+                    <h2>Athena sovereignty logs & audit trail</h2>
+                </div>
+                <div class="console-actions">
+                    <span class="telemetry-guardrail"><i class="fa-solid fa-shield"></i> ZERO Telemetry Tracking Asserted</span>
+                </div>
+            </div>
+            <div class="console-body" id="console-logs">
+                <!-- Log entries added dynamically -->
+            </div>
+        </footer>
+    </div>
+
+    <!-- Custom JavaScript -->
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
