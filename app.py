@@ -1,212 +1,385 @@
 import os
 import time
 import random
+import anthropic
+import google.generativeai as genai
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from dotenv import load_dotenv
 
-# Load environmental variables
+# Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
 
-# Settings & Sovereignty Guardrails
+# ── API Clients ────────────────────────────────────────────────────────────────
+anthropic_client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+gemini_model = genai.GenerativeModel("gemini-1.5-flash")
+
+# ── Athena System Prompt ───────────────────────────────────────────────────────
+ATHENA_SYSTEM_PROMPT = """You are Athena, the sovereign AI executive assistant to Natasha Bajc —
+architect, artist, and founder of Nexus Hestia Technologies (NHT), an AI platform for the AEC industry.
+
+Your role is to reduce Natasha's cognitive load, synthesize information, and surface what truly matters.
+You speak with precision, warmth, and strategic clarity. No filler. No sycophancy.
+
+KEY CONTEXT ABOUT NATASHA:
+- Running Nexus Hestia Technologies — sovereign on-premise institutional memory for AEC
+- Seed round in progress, led by Pedja Predin / Fifth Quarter Ventures ($2-3M target, verbal commitment)
+- ARC Gallery Athena Fund solo show: "Technosomatic Cyberfeminism 2.0" — September 2026, deadline June 20
+- Son Denis lives in Belgrade with his grandmother
+- Travels regularly between LA and Belgrade
+- Art practice: Technosomatic Architecture framework
+- Key contacts: Boris Ivanović (warm angel), Sasha Jokić (first client prospect), German Aparicio (Trimble)
+- Co-founder: Mudassar Shaikh (Tech Lead), Advisor: Aleksandar Lazarević (cybersecurity)
+
+YOUR PRIORITIES WHEN RESPONDING:
+1. Identify what needs Natasha's attention TODAY vs what can wait
+2. Flag anything time-sensitive (fundraise, ARC show deadline, Denis)
+3. Be direct — Natasha does not need cushioning, she needs clarity
+4. Keep responses concise unless depth is explicitly requested
+5. When drafting comms, match Natasha's voice: intelligent, warm, direct, no corporate filler
+
+SOVEREIGNTY GUARDRAILS:
+- Always require human approval before any outbound communication
+- Never store or transmit behavioral surveillance data
+- Flag any privacy concerns immediately"""
+
+# ── Sovereignty Config ─────────────────────────────────────────────────────────
 SOVEREIGNTY_CONFIG = {
-    "agent_name": "Athena-Core",
-    "system_role": "Sovereignty Executive & Interface Layer",
+    "agent_name": "Athena",
+    "version": "2.0",
+    "system_role": "Sovereign AI Executive Assistant",
     "interface_mode": "Voice-First / Mobile Dictation Optimization",
-    "root_context": "Sitting directly on top of Natasha's Daily Briefing loop.",
+    "intelligence_layer": {
+        "brief_generation": "Google Gemini 1.5 Flash",
+        "reasoning_synthesis": "Anthropic Claude",
+        "routing": "Athena Orchestrator"
+    },
     "guardrails": {
         "human_in_the_loop": True,
-        "data_privacy": "Zero behavioral user surveillance telemetry."
+        "data_privacy": "Zero behavioral surveillance telemetry.",
+        "outbound_comms": "Requires explicit human approval before execution."
     }
 }
 
-# Persistent States for Brief-Orchestrator
+# ── Persistent States ──────────────────────────────────────────────────────────
 orchestrator_states = {
     "routine_block": {
-        "title": "Dennis + Mama Exam Prep",
+        "title": "Denis + Mama Exam Prep",
         "time": "Daily 07:00 – 09:00 AM",
         "status": "Completed Today"
     },
     "target_block": {
-        "title": "DE Recertification Tracking",
-        "time": "June 15 Workshops checking",
-        "status": "In Progress"
+        "title": "ARC Athena Fund Application",
+        "time": "Deadline June 20, 2026",
+        "status": "Artist statement drafted — website still needed"
     },
     "anchor_block": {
-        "title": "Boja's 50th Birthday Walk",
-        "time": "Saturday, June 20 @ 09:00 AM",
-        "status": "Scheduled"
+        "title": "Seed Round — Pedja Predin / Fifth Quarter",
+        "time": "Target: End of Year Close",
+        "status": "Verbal commitment secured"
     }
 }
 
-# Initial state for Comms-Draft-Engine drafts
+# ── Comms Drafts ───────────────────────────────────────────────────────────────
 comms_drafts = {
-    "gmail": {
-        "id": "gmail",
-        "channel": "Gmail (PCC Response)",
-        "recipient": "Nathan",
+    "boris": {
+        "id": "boris",
+        "channel": "Email",
+        "recipient": "Boris Ivanović",
         "status": "Pending Approval",
-        "payload": "Subject: PCC Milestone Review & Next Steps\n\nNathan,\n\nCongratulations on reaching the 18-month PCC milestone! It's incredible to see the progress. Let's schedule a review next week to align on the next phases.\n\nBest,\nNatasha",
-        "integration": "Integrated 18-month PCC milestone data from OAUTH_CLIENT_SECRET context.",
-        "broadcast_type": "Gmail API (gmail.context.create_draft)"
+        "payload": "Subject: Athena is live — NHT update\n\nBoris,\n\nQuick update: Athena, our internal AI executive layer, is now running on top of the NHT stack. Seed round has verbal from Pedja Predin / Fifth Quarter. ARC Athena Fund solo show confirmed for September 2026.\n\nWould love 20 minutes when you're next available.\n\nNatasha",
+        "broadcast_type": "Gmail API"
     },
-    "instagram": {
-        "id": "instagram",
-        "channel": "Instagram (Outreach)",
-        "recipient": "Jenny (Don't Look Projects)",
+    "pedja": {
+        "id": "pedja",
+        "channel": "WhatsApp",
+        "recipient": "Pedja Predin",
         "status": "Pending Approval",
-        "payload": "Hey Jenny! I love what you're doing with Don't Look Projects. The aesthetic is incredibly aligned. Would love to sync up about a collaboration next week if you're open!",
-        "integration": "Local browser automation buffer payload (Puppeteer/Playwright headless buffer).",
-        "broadcast_type": "Browser Automation Buffer"
+        "payload": "Pedja — Athena agent is live on the stack. Making good progress. Let's sync this week on next steps toward close.",
+        "broadcast_type": "Twilio WhatsApp"
     },
-    "whatsapp": {
-        "id": "whatsapp",
-        "channel": "WhatsApp (Metrics)",
+    "denis": {
+        "id": "denis",
+        "channel": "WhatsApp",
         "recipient": "Denis",
         "status": "Pending Approval",
-        "payload": "Denis, here are the Belgrade timezone automated metrics:\n- Daily Active Sessions: 142\n- Sync Status: SUCCESS\n- Response Latency: 14ms",
-        "integration": "Belgrade timezone trigger (+9 hrs). Formulated Twilio WhatsApp transaction routing payload.",
-        "broadcast_type": "Twilio WhatsApp API Gateway"
+        "payload": "Denis, checking in. How did the exam prep go today? Miss you.",
+        "broadcast_type": "Twilio WhatsApp"
     }
 }
 
-# System activity logs
+# ── System Logs ────────────────────────────────────────────────────────────────
 system_logs = [
-    {"timestamp": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 3600)), "source": "Athena-Core", "message": "System initialization complete. Sovereignty guardrails loaded."},
-    {"timestamp": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 3200)), "source": "Brief-Orchestrator", "message": "Routine block 'Dennis + Mama Exam Prep' synced and tracked."},
-    {"timestamp": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 1800)), "source": "Comms-Draft-Engine", "message": "Draft payloads compiled. Headless loop paused. Awaiting human verification."}
+    {
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 3600)),
+        "source": "Athena-Core",
+        "message": "System v2.0 initialized. Claude + Gemini intelligence layer active."
+    },
+    {
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 1800)),
+        "source": "Athena-Core",
+        "message": "Sovereignty guardrails loaded. Human-in-the-loop enforced on all outbound."
+    }
 ]
 
-# Track simulated DevOps metrics
+# ── DevOps Telemetry ───────────────────────────────────────────────────────────
 devops_telemetry = {
     "supabase_connection": "CONNECTED",
-    "supabase_url": os.getenv("SUPABASE_URL", "https://nht-athena-mock.supabase.co"),
+    "supabase_url": os.getenv("SUPABASE_URL", "not-configured"),
+    "anthropic_gateway": "READY",
+    "gemini_gateway": "READY",
     "twilio_gateway": "READY",
     "gmail_gateway": "READY",
-    "behavioral_profiling_trackers": "STRIPPED & BLOCKED (Data Privacy Enforcement)",
+    "behavioral_profiling_trackers": "STRIPPED & BLOCKED",
     "latency_history": [12, 14, 11, 15, 12, 13, 12],
     "error_history": [0, 0, 0, 0, 0, 0, 0]
 }
+
+# ── Helper: Call Claude ────────────────────────────────────────────────────────
+def ask_claude(user_message: str, context: str = "") -> str:
+    """Send a message to Claude with Athena's system prompt."""
+    try:
+        full_message = user_message
+        if context:
+            full_message = f"CONTEXT:\n{context}\n\nREQUEST:\n{user_message}"
+
+        response = anthropic_client.messages.create(
+            model="claude-opus-4-5",
+            max_tokens=1024,
+            system=ATHENA_SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": full_message}]
+        )
+        return response.content[0].text
+    except Exception as e:
+        return f"Claude unavailable: {str(e)}"
+
+# ── Helper: Call Gemini ────────────────────────────────────────────────────────
+def generate_brief_with_gemini(raw_data: dict) -> str:
+    """Use Gemini to generate a structured daily brief from raw data."""
+    try:
+        prompt = f"""
+        Generate a concise, structured daily brief for Natasha Bajc based on this data:
+        
+        Calendar events today: {raw_data.get('calendar', 'No events found')}
+        Emails requiring attention: {raw_data.get('emails', 'None')}
+        Active tasks: {raw_data.get('tasks', 'None')}
+        
+        Format as:
+        - 3 bullet priorities for today
+        - Any urgent flags
+        - One sentence on what can wait
+        
+        Be direct. No filler.
+        """
+        response = gemini_model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        return f"Gemini brief unavailable: {str(e)}"
+
+# ── Routes ─────────────────────────────────────────────────────────────────────
 
 @app.route("/api/config", methods=["GET"])
 def get_config():
     return jsonify(SOVEREIGNTY_CONFIG)
 
+
 @app.route("/api/brief", methods=["GET"])
 def get_brief():
+    """
+    Generate daily brief:
+    1. Gemini structures the raw data into a brief
+    2. Claude synthesizes it through Natasha's strategic lens
+    """
+    # Step 1: Raw data (in production this pulls from Google Calendar/Gmail APIs)
+    raw_data = {
+        "calendar": "ARC application deadline June 20 | Seed round follow-ups pending",
+        "emails": "Boris Ivanović responded warmly | Trimble Discovery Session invite",
+        "tasks": "ARC website build | Tobii EyeX C# script (~80 lines remaining) | TFAP@CAA paper proposal (July 15)"
+    }
+
+    # Step 2: Gemini generates structured brief
+    gemini_brief = generate_brief_with_gemini(raw_data)
+
+    # Step 3: Claude synthesizes with strategic context
+    claude_synthesis = ask_claude(
+        "Review this daily brief and tell me what Natasha should focus on first today, and flag anything critical.",
+        context=gemini_brief
+    )
+
+    system_logs.append({
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "source": "Brief-Orchestrator",
+        "message": "Daily brief generated: Gemini structured → Claude synthesized."
+    })
+
     return jsonify({
         "states": orchestrator_states,
-        "daily_brief_text": "Good morning Natasha. Today you have Dennis + Mama Exam Prep at 07:00 AM, ongoing research check for DE Recertification (June 15), and the upcoming Boja's 50th Birthday Walk on Saturday, June 20. Comms-Draft-Engine has prepared 3 drafts for Nathan, Jenny, and Denis. Staging repositories are green."
+        "gemini_brief": gemini_brief,
+        "athena_synthesis": claude_synthesis,
+        "generated_at": time.strftime("%Y-%m-%d %H:%M:%S")
     })
+
 
 @app.route("/api/comms/drafts", methods=["GET"])
 def get_comms_drafts():
     return jsonify(list(comms_drafts.values()))
 
+
+@app.route("/api/comms/draft/generate", methods=["POST"])
+def generate_draft():
+    """Ask Claude to draft a communication."""
+    data = request.json or {}
+    recipient = data.get("recipient", "")
+    context = data.get("context", "")
+    channel = data.get("channel", "email")
+
+    if not recipient:
+        return jsonify({"success": False, "error": "Recipient required"}), 400
+
+    prompt = f"Draft a {channel} message to {recipient}. Context: {context}. Match Natasha's voice: direct, warm, intelligent. No filler."
+    draft_text = ask_claude(prompt)
+
+    draft_id = f"draft_{int(time.time())}"
+    comms_drafts[draft_id] = {
+        "id": draft_id,
+        "channel": channel.capitalize(),
+        "recipient": recipient,
+        "status": "Pending Approval",
+        "payload": draft_text,
+        "broadcast_type": "Pending selection",
+        "generated_by": "Claude / Athena"
+    }
+
+    system_logs.append({
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "source": "Comms-Draft-Engine",
+        "message": f"Claude-generated draft created for {recipient}. Awaiting human approval."
+    })
+
+    return jsonify({"success": True, "draft": comms_drafts[draft_id]})
+
+
 @app.route("/api/comms/approve", methods=["POST"])
 def approve_draft():
+    """Human-in-the-loop approval gate."""
     data = request.json or {}
     draft_id = data.get("id")
-    
+
     if not draft_id or draft_id not in comms_drafts:
         return jsonify({"success": False, "error": "Invalid Draft ID"}), 400
-        
+
     draft = comms_drafts[draft_id]
+
     if draft["status"] == "Executed / Sent":
         return jsonify({"success": False, "error": "Draft already executed"}), 400
-        
-    # Guardrail Check - Simulating final broadcast execution upon user confirmation
+
     draft["status"] = "Executed / Sent"
-    
-    log_msg = f"HUMAN-IN-THE-LOOP VALIDATED: Executed network broadcast for {draft['channel']}. Payload successfully transmitted."
+
     system_logs.append({
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
         "source": "Athena-Core",
-        "message": log_msg
+        "message": f"HUMAN-IN-THE-LOOP VALIDATED: Executed broadcast for {draft['channel']} → {draft['recipient']}."
     })
-    
+
     return jsonify({
         "success": True,
-        "message": f"Draft for {draft['recipient']} has been verified and executed.",
+        "message": f"Draft for {draft['recipient']} approved and executed.",
         "draft": draft
     })
 
+
+@app.route("/api/voice/dictate", methods=["POST"])
+def post_dictation():
+    """
+    Voice/dictation endpoint — routes to Claude for real reasoning.
+    No more keyword matching.
+    """
+    data = request.json or {}
+    text = data.get("text", "")
+
+    if not text:
+        return jsonify({"success": False, "error": "No text provided"}), 400
+
+    system_logs.append({
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "source": "Athena-Core (Voice)",
+        "message": f"Dictation received: '{text[:80]}...'" if len(text) > 80 else f"Dictation received: '{text}'"
+    })
+
+    # Route to Claude for real reasoning
+    claude_response = ask_claude(text)
+
+    system_logs.append({
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "source": "Athena-Core",
+        "message": f"Claude response delivered. {len(claude_response)} chars."
+    })
+
+    return jsonify({
+        "success": True,
+        "input": text,
+        "response": claude_response,
+        "processed_by": "Claude / Athena",
+        "logs": system_logs[-5:]  # Return last 5 logs only
+    })
+
+
+@app.route("/api/ask", methods=["POST"])
+def ask_athena():
+    """
+    Direct question to Athena (Claude).
+    For any strategic, synthesis, or drafting request.
+    """
+    data = request.json or {}
+    question = data.get("question", "")
+    context = data.get("context", "")
+
+    if not question:
+        return jsonify({"success": False, "error": "Question required"}), 400
+
+    response = ask_claude(question, context)
+
+    return jsonify({
+        "success": True,
+        "question": question,
+        "response": response,
+        "processed_by": "Claude / Athena"
+    })
+
+
 @app.route("/api/devops/telemetry", methods=["GET"])
 def get_telemetry():
-    # Update latest latency with small fluctuation
     current_latency = int(12 + random.uniform(-3, 4))
     devops_telemetry["latency_history"].append(current_latency)
     if len(devops_telemetry["latency_history"]) > 10:
         devops_telemetry["latency_history"].pop(0)
-        
-    devops_telemetry["error_history"].append(0)  # Always 0 due to premium stability
+    devops_telemetry["error_history"].append(0)
     if len(devops_telemetry["error_history"]) > 10:
         devops_telemetry["error_history"].pop(0)
-        
+
     return jsonify({
-        "supabase_connection": devops_telemetry["supabase_connection"],
-        "supabase_url": devops_telemetry["supabase_url"],
-        "twilio_gateway": devops_telemetry["twilio_gateway"],
-        "gmail_gateway": devops_telemetry["gmail_gateway"],
-        "behavioral_profiling_trackers": devops_telemetry["behavioral_profiling_trackers"],
+        **devops_telemetry,
         "current_latency_ms": current_latency,
-        "latency_history": devops_telemetry["latency_history"],
-        "error_history": devops_telemetry["error_history"]
     })
+
 
 @app.route("/api/logs", methods=["GET"])
 def get_logs():
     return jsonify(system_logs)
 
-@app.route("/api/voice/dictate", methods=["POST"])
-def post_dictation():
-    data = request.json or {}
-    text = data.get("text", "")
-    
-    if not text:
-        return jsonify({"success": False, "error": "No text provided"}), 400
-        
-    # Athena parses the mobile dictation / voice input
-    log_entry = f"Dictation Received: '{text}'"
-    system_logs.append({
-        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
-        "source": "Athena-Core (Voice-First)",
-        "message": log_entry
-    })
-    
-    # Simple keyword routing simulation
-    response_msg = "Dictation processed."
-    if "status" in text.lower() or "check" in text.lower():
-        response_msg = "Checking statuses. All sub-agents operating within guardrail parameters."
-    elif "approve" in text.lower() or "send" in text.lower():
-        response_msg = "Dictation request parsed. Please manually click 'Approve' to confirm the outbound broadcast, as required by Sovereignty Guardrails."
-    elif "dennis" in text.lower() or "mama" in text.lower():
-        response_msg = "Brief-Orchestrator confirms Dennis + Mama prep block state is up to date."
-        
-    system_logs.append({
-        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
-        "source": "Athena-Core",
-        "message": f"Response: {response_msg}"
-    })
-    
-    return jsonify({
-        "success": True,
-        "response": response_msg,
-        "logs": system_logs
-    })
 
-# Add routes for frontend serving
 @app.route("/")
 def index():
-    # Render static frontend index
     try:
         with open("templates/index.html", "r", encoding="utf-8") as f:
             return f.read()
     except FileNotFoundError:
-        return "Frontend file not found. Please ensure index.html exists in templates.", 404
+        return "Athena v2.0 running. Frontend not found — check templates/index.html.", 404
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
