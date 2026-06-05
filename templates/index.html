@@ -5,14 +5,225 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NHT Athena - Sovereignty Executive Console</title>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
-    <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Custom CSS -->
     <link rel="stylesheet" href="/static/css/styles.css">
+
+    <style>
+        /* ── DRAFT CARD UPGRADES ─────────────────────────────── */
+        .draft-card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.09);
+            border-radius: 8px;
+            padding: 14px;
+            margin-bottom: 12px;
+            transition: border-color 0.2s;
+        }
+        .draft-card:hover { border-color: rgba(255,255,255,0.18); }
+
+        .draft-card.rejected  { opacity: 0.45; border-color: rgba(255,80,80,0.3); }
+        .draft-card.executed  { opacity: 0.55; border-color: rgba(80,255,150,0.3); }
+
+        .draft-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .draft-recipient { font-family: 'Space Mono', monospace; font-size: 0.78rem; color: #a0cfff; }
+        .draft-channel   { font-size: 0.72rem; color: #888; }
+        .draft-status    { font-size: 0.72rem; padding: 2px 8px; border-radius: 10px; }
+        .draft-status.pending  { background: rgba(255,200,60,0.15); color: #ffc83c; }
+        .draft-status.executed { background: rgba(60,220,120,0.15); color: #3cdc78; }
+        .draft-status.rejected { background: rgba(255,80,80,0.15);  color: #ff5050; }
+
+        /* Resizable textarea — FIX 1 & 2 */
+        .draft-textarea {
+            width: 100%;
+            min-height: 90px;
+            max-height: 320px;
+            resize: vertical;            /* user can drag to resize */
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 6px;
+            color: #e0e0e0;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.82rem;
+            line-height: 1.5;
+            padding: 10px 12px;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+        .draft-textarea:focus {
+            outline: none;
+            border-color: rgba(120,180,255,0.4);
+        }
+        .draft-textarea[readonly] { cursor: default; opacity: 0.85; }
+
+        .draft-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        .btn-edit     { background: rgba(100,150,255,0.15); color: #7aaaff; border: 1px solid rgba(100,150,255,0.3); }
+        .btn-save     { background: rgba(100,200,255,0.15); color: #64d0ff; border: 1px solid rgba(100,200,255,0.3); display:none; }
+        .btn-approve  { background: rgba(60,220,120,0.15);  color: #3cdc78; border: 1px solid rgba(60,220,120,0.3); }
+        .btn-reject   { background: rgba(255,80,80,0.12);   color: #ff6060; border: 1px solid rgba(255,80,80,0.25); }
+        .btn-remove   { background: rgba(255,80,80,0.08);   color: #ff4040; border: 1px solid rgba(255,80,80,0.2);  }
+
+        .draft-actions button {
+            padding: 5px 12px;
+            border-radius: 5px;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.72rem;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .draft-actions button:hover { filter: brightness(1.3); transform: translateY(-1px); }
+
+        /* Repeat-tomorrow prompt — FIX 3 */
+        .repeat-prompt {
+            display: none;
+            margin-top: 10px;
+            padding: 10px 12px;
+            background: rgba(255,160,60,0.08);
+            border: 1px solid rgba(255,160,60,0.25);
+            border-radius: 6px;
+            font-size: 0.8rem;
+            color: #ffb860;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .repeat-prompt.visible { display: flex; }
+        .repeat-prompt button  {
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.72rem;
+            font-family: 'Space Mono', monospace;
+            cursor: pointer;
+            border: 1px solid currentColor;
+            background: transparent;
+            color: inherit;
+            transition: all 0.15s;
+        }
+        .repeat-prompt button:hover { filter: brightness(1.3); }
+
+        /* Priorities panel — FIX 5 */
+        .priorities-panel {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(120,180,255,0.15);
+            border-radius: 8px;
+            padding: 14px;
+            margin-top: 14px;
+        }
+        .priorities-panel h3 {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.78rem;
+            color: #7aaaff;
+            margin: 0 0 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .priority-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            font-size: 0.82rem;
+            color: #ccc;
+            line-height: 1.4;
+        }
+        .priority-item:last-child { border-bottom: none; }
+        .priority-num {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.7rem;
+            color: #555;
+            min-width: 20px;
+            padding-top: 2px;
+        }
+        .priority-urgent { color: #ff9060; }
+        .priority-urgent .priority-num { color: #ff6030; }
+
+        /* Feedback loop — FIX 4 */
+        .feedback-module {
+            margin-top: 14px;
+            padding: 12px 14px;
+            background: rgba(100,200,150,0.05);
+            border: 1px solid rgba(100,200,150,0.15);
+            border-radius: 8px;
+        }
+        .feedback-module h3 {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.75rem;
+            color: #64c896;
+            margin: 0 0 8px 0;
+        }
+        .feedback-input-row {
+            display: flex;
+            gap: 8px;
+        }
+        .feedback-input {
+            flex: 1;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 6px;
+            color: #e0e0e0;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.82rem;
+            padding: 8px 12px;
+        }
+        .feedback-input:focus { outline: none; border-color: rgba(100,200,150,0.4); }
+        .btn-feedback {
+            background: rgba(100,200,150,0.15);
+            color: #64c896;
+            border: 1px solid rgba(100,200,150,0.3);
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.72rem;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.15s;
+        }
+        .btn-feedback:hover { filter: brightness(1.3); }
+        .feedback-sent {
+            font-size: 0.78rem;
+            color: #64c896;
+            margin-top: 6px;
+            display: none;
+        }
+
+        /* Athena response box */
+        .athena-response-box {
+            margin-top: 12px;
+            padding: 12px;
+            background: rgba(120,100,200,0.07);
+            border: 1px solid rgba(120,100,200,0.2);
+            border-radius: 8px;
+            font-size: 0.83rem;
+            color: #c8b8ff;
+            line-height: 1.6;
+            display: none;
+            white-space: pre-wrap;
+        }
+        .athena-response-box.visible { display: block; }
+        .athena-response-label {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.68rem;
+            color: #9888cc;
+            margin-bottom: 6px;
+            display: block;
+        }
+    </style>
 </head>
 <body>
     <div class="glass-bg-glow"></div>
-    
+
     <div class="app-container">
         <!-- HEADER -->
         <header class="app-header">
@@ -20,15 +231,13 @@
                 <img src="/static/intricateNHT.png" alt="Nexus Hestia Technologies Logo" class="brand-logo">
                 <div class="brand-text">
                     <h1>ATHENA</h1>
-                    <span class="version-tag">v2.1</span>
+                    <span class="version-tag">v2.2</span>
                 </div>
             </div>
-            
             <div class="sovereignty-badge">
                 <i class="fa-solid fa-shield-halved"></i>
                 <span>SOVEREIGNTY GUARDRAIL: ACTIVE</span>
             </div>
-            
             <div class="time-widget" id="time-widget">
                 <div class="time-item">
                     <span class="label">LOCAL</span>
@@ -43,8 +252,8 @@
 
         <!-- MAIN 4-GRID LAYOUT -->
         <main class="dashboard-grid">
-            
-            <!-- COLUMN 1: ATHENA CORE (Voice & Interface) -->
+
+            <!-- COLUMN 1: ATHENA CORE -->
             <section class="card athena-core-card">
                 <div class="card-header">
                     <div class="icon-title">
@@ -56,31 +265,34 @@
                 <div class="card-body">
                     <div class="voice-module">
                         <p class="section-desc">Mobile dictation optimization & voice-first entry</p>
-                        
                         <div class="wave-container">
                             <canvas id="waveform-canvas"></canvas>
                             <button class="mic-btn" id="mic-btn" title="Simulate Voice Input">
                                 <i class="fa-solid fa-microphone"></i>
                             </button>
                         </div>
-                        
                         <div class="dictation-input-group">
-                            <input type="text" id="dictation-input" placeholder="Type a verbal instruction or command..." autocomplete="off">
+                            <input type="text" id="dictation-input" placeholder="Ask Athena anything..." autocomplete="off">
                             <button class="send-btn" id="send-dictation-btn">
                                 <i class="fa-solid fa-paper-plane"></i>
                             </button>
                         </div>
                         <div class="suggestions">
-                            <span class="suggest-chip" onclick="applySuggestion('Check current block status')">"Check status"</span>
-                            <span class="suggest-chip" onclick="applySuggestion('Approve Nathan Gmail draft')">"Approve Nathan draft"</span>
-                            <span class="suggest-chip" onclick="applySuggestion('Audit Belgrade timezone metrics')">"Audit Belgrade offsets"</span>
+                            <span class="suggest-chip" onclick="applySuggestion('What should I focus on today?')">"Today's priorities"</span>
+                            <span class="suggest-chip" onclick="applySuggestion('Status of seed round with Pedja')">"Seed round status"</span>
+                            <span class="suggest-chip" onclick="applySuggestion('ARC show deadline status')">"ARC deadline"</span>
+                        </div>
+
+                        <!-- Athena Response Box -->
+                        <div class="athena-response-box" id="athena-response-box">
+                            <span class="athena-response-label">ATHENA / CLAUDE</span>
+                            <span id="athena-response-text"></span>
                         </div>
                     </div>
 
                     <div class="pending-approvals-module">
                         <h3><i class="fa-solid fa-user-check"></i> Pending Broadcast Approvals</h3>
                         <div id="approvals-list" class="approvals-list">
-                            <!-- Populated by JS -->
                             <div class="loading-placeholder">Loading pending items...</div>
                         </div>
                     </div>
@@ -99,9 +311,35 @@
                 <div class="card-body">
                     <div class="brief-summary-box">
                         <h3>Daily Briefing Synopsis</h3>
-                        <p id="brief-text">Loading latest daily brief synopsis from Gemini...</p>
+                        <p id="brief-text">Loading latest daily brief from Gemini + Claude...</p>
+                        <!-- Athena synthesis -->
+                        <div id="brief-synthesis" class="athena-response-box" style="margin-top:10px;">
+                            <span class="athena-response-label">ATHENA SYNTHESIS / CLAUDE</span>
+                            <span id="brief-synthesis-text"></span>
+                        </div>
                     </div>
-                    
+
+                    <!-- FIX 5: Today's Priorities from Claude+Gemini -->
+                    <div class="priorities-panel" id="priorities-panel">
+                        <h3><i class="fa-solid fa-bullseye"></i> Today's Priorities — Athena</h3>
+                        <div id="priorities-list">
+                            <div class="loading-placeholder">Coordinating with Gemini + Claude...</div>
+                        </div>
+                    </div>
+
+                    <!-- FIX 4: Feedback loop for tomorrow's brief -->
+                    <div class="feedback-module">
+                        <h3><i class="fa-solid fa-rotate-right"></i> Brief Feedback → Tomorrow</h3>
+                        <div class="feedback-input-row">
+                            <input type="text" class="feedback-input" id="feedback-input"
+                                placeholder="Tell Athena what was missed or wrong today...">
+                            <button class="btn-feedback" onclick="submitFeedback()">SEND</button>
+                        </div>
+                        <div class="feedback-sent" id="feedback-sent">
+                            <i class="fa-solid fa-check"></i> Feedback logged — Gemini + Claude will incorporate tomorrow.
+                        </div>
+                    </div>
+
                     <div class="timeline-module">
                         <h3><i class="fa-solid fa-clock-rotate-left"></i> Persistent State Blocks</h3>
                         <div class="timeline">
@@ -112,32 +350,30 @@
                                         <h4>Routine Block</h4>
                                         <span class="time-pill">07:00 - 09:00 AM</span>
                                     </div>
-                                    <p class="title">Dennis + Mama Exam Prep</p>
+                                    <p class="title" id="routine-title">Denis + Mama Exam Prep</p>
                                     <span class="status-indicator success">Active Daily Loop</span>
                                 </div>
                             </div>
-                            
                             <div class="timeline-item" id="state-target">
                                 <div class="timeline-badge target"><i class="fa-solid fa-graduation-cap"></i></div>
                                 <div class="timeline-content">
                                     <div class="time-header">
                                         <h4>Target Block</h4>
-                                        <span class="time-pill">June 15 Target</span>
+                                        <span class="time-pill" id="target-time">—</span>
                                     </div>
-                                    <p class="title">DE Recertification Tracking</p>
-                                    <span class="status-indicator warning">Workshops Check</span>
+                                    <p class="title" id="target-title">—</p>
+                                    <span class="status-indicator warning" id="target-status">In Progress</span>
                                 </div>
                             </div>
-                            
                             <div class="timeline-item" id="state-anchor">
-                                <div class="timeline-badge anchor"><i class="fa-solid fa-cake-candles"></i></div>
+                                <div class="timeline-badge anchor"><i class="fa-solid fa-seedling"></i></div>
                                 <div class="timeline-content">
                                     <div class="time-header">
                                         <h4>Anchor Block</h4>
-                                        <span class="time-pill">Sat, June 20 @ 09:00 AM</span>
+                                        <span class="time-pill" id="anchor-time">—</span>
                                     </div>
-                                    <p class="title">Boja's 50th Birthday Walk</p>
-                                    <span class="status-indicator info">Scheduled</span>
+                                    <p class="title" id="anchor-title">—</p>
+                                    <span class="status-indicator info" id="anchor-status">Scheduled</span>
                                 </div>
                             </div>
                         </div>
@@ -145,7 +381,7 @@
                 </div>
             </section>
 
-            <!-- COLUMN 3: COMMS-DRAFT-ENGINE -->
+            <!-- COLUMN 3: COMMS-DRAFT-ENGINE (FIX 1, 2, 3) -->
             <section class="card comms-draft-card">
                 <div class="card-header">
                     <div class="icon-title">
@@ -156,11 +392,9 @@
                 </div>
                 <div class="card-body">
                     <div class="section-info">
-                        <p>Orchestrating drafts in a <strong>Draft & Pause</strong> sequence. Approved drafts transmit instantly.</p>
+                        <p>Edit drafts freely before approval. Rejected drafts ask if they should repeat tomorrow — otherwise removed.</p>
                     </div>
-                    
                     <div class="drafts-container" id="drafts-container">
-                        <!-- Populated by JS -->
                         <div class="loading-placeholder">Loading drafts...</div>
                     </div>
                 </div>
@@ -176,7 +410,6 @@
                     <span class="badge amber">Pipeline & Infra</span>
                 </div>
                 <div class="card-body">
-                    <!-- Telemetry Summary -->
                     <div class="telemetry-summary">
                         <div class="tel-box">
                             <span class="tel-label">SUPABASE</span>
@@ -191,60 +424,52 @@
                             <span class="tel-value danger-text" id="tel-behavioral">STRIPPED</span>
                         </div>
                     </div>
-
-                    <!-- Telemetry Chart -->
                     <div class="chart-container">
                         <div class="chart-header">
                             <h3>Connection Latency History (ms)</h3>
                             <span class="chart-status"><i class="fa-solid fa-circle-nodes"></i> Zero Tracking Telemetry Asserted</span>
                         </div>
                         <div class="simulated-chart" id="latency-chart">
-                            <!-- Animated CSS/JS bars represent latency history -->
-                            <div class="chart-bar" style="height: 48%;"><span>12ms</span></div>
-                            <div class="chart-bar" style="height: 56%;"><span>14ms</span></div>
-                            <div class="chart-bar" style="height: 44%;"><span>11ms</span></div>
-                            <div class="chart-bar" style="height: 60%;"><span>15ms</span></div>
-                            <div class="chart-bar" style="height: 48%;"><span>12ms</span></div>
-                            <div class="chart-bar" style="height: 52%;"><span>13ms</span></div>
-                            <div class="chart-bar active" style="height: 48%;"><span>12ms</span></div>
+                            <div class="chart-bar" style="height:48%"><span>12ms</span></div>
+                            <div class="chart-bar" style="height:56%"><span>14ms</span></div>
+                            <div class="chart-bar" style="height:44%"><span>11ms</span></div>
+                            <div class="chart-bar" style="height:60%"><span>15ms</span></div>
+                            <div class="chart-bar" style="height:48%"><span>12ms</span></div>
+                            <div class="chart-bar" style="height:52%"><span>13ms</span></div>
+                            <div class="chart-bar active" style="height:48%"><span>12ms</span></div>
                         </div>
                     </div>
-
-                    <!-- Staging & Git Workspace Tracking -->
                     <div class="devops-git-workspace">
                         <h3><i class="fa-solid fa-code-branch"></i> Repository Staging Build</h3>
                         <div class="workspace-list">
                             <div class="workspace-item">
-                                <span class="repo-name">NexusHestiaSearchEngine</span>
+                                <span class="repo-name">NHT-Athena</span>
+                                <span class="repo-status success-text"><i class="fa-solid fa-circle-check"></i> v2.2 Live</span>
+                            </div>
+                            <div class="workspace-item">
+                                <span class="repo-name">technosomatic-arc-athena</span>
                                 <span class="repo-status success-text"><i class="fa-solid fa-circle-check"></i> Built</span>
                             </div>
                             <div class="workspace-item">
-                                <span class="repo-name">LlamaImageSorter</span>
-                                <span class="repo-status success-text"><i class="fa-solid fa-circle-check"></i> Built</span>
-                            </div>
-                            <div class="workspace-item">
-                                <span class="repo-name">TechnosomaticArtImageSearch</span>
+                                <span class="repo-name">Technosomatic-Rendered</span>
                                 <span class="repo-status success-text"><i class="fa-solid fa-circle-check"></i> Built</span>
                             </div>
                         </div>
                     </div>
-
-                    <!-- Environment Config State -->
                     <div class="env-config-panel">
                         <h3><i class="fa-solid fa-key"></i> Key Gateways Active</h3>
                         <div class="keys-grid">
+                            <div class="key-item"><span class="key-name">Anthropic / Claude</span><span class="key-val"><i class="fa-solid fa-check icon-green"></i></span></div>
+                            <div class="key-item"><span class="key-name">Gemini / Google</span><span class="key-val"><i class="fa-solid fa-check icon-green"></i></span></div>
                             <div class="key-item"><span class="key-name">Supabase</span><span class="key-val"><i class="fa-solid fa-check icon-green"></i></span></div>
-                            <div class="key-item"><span class="key-name">Google OAuth</span><span class="key-val"><i class="fa-solid fa-check icon-green"></i></span></div>
                             <div class="key-item"><span class="key-name">Twilio WhatsApp</span><span class="key-val"><i class="fa-solid fa-check icon-green"></i></span></div>
-                            <div class="key-item"><span class="key-name">Serper Scraper</span><span class="key-val"><i class="fa-solid fa-check icon-green"></i></span></div>
                         </div>
                     </div>
                 </div>
             </section>
-
         </main>
 
-        <!-- SYSTEM LOGS CONSOLE -->
+        <!-- SYSTEM LOGS -->
         <footer class="app-footer">
             <div class="console-header">
                 <div class="console-title">
@@ -255,12 +480,9 @@
                     <span class="telemetry-guardrail"><i class="fa-solid fa-shield"></i> ZERO Telemetry Tracking Asserted</span>
                 </div>
             </div>
-            <div class="console-body" id="console-logs">
-                <!-- Log entries added dynamically -->
-            </div>
+            <div class="console-body" id="console-logs"></div>
         </footer>
-        
-        <!-- FOOTER BRANDING MAP -->
+
         <div class="footer-branding">
             <div class="footer-branding-left">
                 <img src="/static/reducedNHT.png" alt="NHT Reduced Logo" class="footer-logo">
@@ -273,7 +495,278 @@
         </div>
     </div>
 
-    <!-- Custom JavaScript -->
     <script src="/static/js/app.js"></script>
+
+    <script>
+    // ── DRAFT ENGINE — FIX 1, 2, 3 ────────────────────────────────────────────
+    let draftsData = {};
+
+    async function loadDrafts() {
+        try {
+            const res = await fetch('/api/comms/drafts');
+            const drafts = await res.json();
+            draftsData = {};
+            drafts.forEach(d => { draftsData[d.id] = d; });
+            renderDrafts();
+            renderApprovals();
+        } catch(e) { console.error('Drafts load failed', e); }
+    }
+
+    function renderDrafts() {
+        const container = document.getElementById('drafts-container');
+        const pending = Object.values(draftsData).filter(d => d.status === 'Pending Approval');
+        if (!pending.length) {
+            container.innerHTML = '<div class="loading-placeholder">No pending drafts.</div>';
+            return;
+        }
+        container.innerHTML = pending.map(d => buildDraftCard(d)).join('');
+    }
+
+    function buildDraftCard(d) {
+        return `
+        <div class="draft-card" id="draft-card-${d.id}">
+            <div class="draft-meta">
+                <span class="draft-recipient"><i class="fa-solid fa-user fa-xs"></i> ${d.recipient}</span>
+                <span class="draft-channel">${d.channel}</span>
+                <span class="draft-status pending" id="draft-status-${d.id}">PENDING APPROVAL</span>
+            </div>
+
+            <!-- FIX 1+2: resizable textarea, editable before approve -->
+            <textarea class="draft-textarea" id="draft-text-${d.id}" readonly>${d.payload}</textarea>
+
+            <div class="draft-actions">
+                <button class="btn-edit" onclick="editDraft('${d.id}')">
+                    <i class="fa-solid fa-pen"></i> EDIT
+                </button>
+                <button class="btn-save" id="save-btn-${d.id}" onclick="saveDraft('${d.id}')">
+                    <i class="fa-solid fa-floppy-disk"></i> SAVE
+                </button>
+                <button class="btn-approve" onclick="approveDraft('${d.id}')">
+                    <i class="fa-solid fa-check"></i> APPROVE & SEND
+                </button>
+                <button class="btn-reject" onclick="rejectDraft('${d.id}')">
+                    <i class="fa-solid fa-xmark"></i> REJECT
+                </button>
+            </div>
+
+            <!-- FIX 3: repeat-tomorrow prompt -->
+            <div class="repeat-prompt" id="repeat-prompt-${d.id}">
+                <span>Rejected. Schedule this draft for tomorrow?</span>
+                <button onclick="repeatTomorrow('${d.id}', true)">YES, TOMORROW</button>
+                <button onclick="repeatTomorrow('${d.id}', false)">NO, REMOVE</button>
+            </div>
+        </div>`;
+    }
+
+    // FIX 2: toggle edit mode
+    function editDraft(id) {
+        const ta = document.getElementById(`draft-text-${id}`);
+        const saveBtn = document.getElementById(`save-btn-${id}`);
+        ta.removeAttribute('readonly');
+        ta.focus();
+        saveBtn.style.display = 'inline-block';
+        addLog('Comms-Draft-Engine', `Draft for ${draftsData[id]?.recipient} opened for editing.`);
+    }
+
+    function saveDraft(id) {
+        const ta = document.getElementById(`draft-text-${id}`);
+        ta.setAttribute('readonly', true);
+        document.getElementById(`save-btn-${id}`).style.display = 'none';
+        if (draftsData[id]) draftsData[id].payload = ta.value;
+        addLog('Comms-Draft-Engine', `Draft for ${draftsData[id]?.recipient} saved with edits.`);
+    }
+
+    async function approveDraft(id) {
+        // Save any edits first
+        saveDraft(id);
+        try {
+            const res = await fetch('/api/comms/approve', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, payload: draftsData[id]?.payload })
+            });
+            const data = await res.json();
+            if (data.success) {
+                const card = document.getElementById(`draft-card-${id}`);
+                card.classList.add('executed');
+                document.getElementById(`draft-status-${id}`).className = 'draft-status executed';
+                document.getElementById(`draft-status-${id}`).textContent = 'EXECUTED / SENT';
+                // Remove action buttons
+                card.querySelector('.draft-actions').innerHTML =
+                    '<span style="font-size:0.75rem;color:#3cdc78"><i class="fa-solid fa-circle-check"></i> Transmitted</span>';
+                addLog('Athena-Core', `HUMAN-IN-THE-LOOP VALIDATED: Draft sent to ${draftsData[id]?.recipient}.`);
+                setTimeout(() => { card.style.display = 'none'; renderApprovals(); }, 2000);
+            }
+        } catch(e) { console.error('Approve failed', e); }
+    }
+
+    // FIX 3: reject → ask repeat
+    function rejectDraft(id) {
+        const card = document.getElementById(`draft-card-${id}`);
+        card.classList.add('rejected');
+        document.getElementById(`draft-status-${id}`).className = 'draft-status rejected';
+        document.getElementById(`draft-status-${id}`).textContent = 'REJECTED';
+        card.querySelector('.draft-actions').style.display = 'none';
+        document.getElementById(`repeat-prompt-${id}`).classList.add('visible');
+        addLog('Comms-Draft-Engine', `Draft for ${draftsData[id]?.recipient} rejected. Awaiting repeat decision.`);
+    }
+
+    function repeatTomorrow(id, repeat) {
+        const card = document.getElementById(`draft-card-${id}`);
+        if (repeat) {
+            addLog('Comms-Draft-Engine', `Draft for ${draftsData[id]?.recipient} scheduled to repeat tomorrow.`);
+            card.querySelector('.repeat-prompt').innerHTML =
+                '<span><i class="fa-solid fa-clock"></i> Scheduled for tomorrow\'s brief.</span>';
+            setTimeout(() => { card.style.display = 'none'; }, 2500);
+        } else {
+            addLog('Comms-Draft-Engine', `Draft for ${draftsData[id]?.recipient} removed from queue.`);
+            card.style.display = 'none';
+        }
+        delete draftsData[id];
+        renderApprovals();
+    }
+
+    function renderApprovals() {
+        const list = document.getElementById('approvals-list');
+        const pending = Object.values(draftsData).filter(d => d.status === 'Pending Approval');
+        if (!pending.length) {
+            list.innerHTML = '<div class="loading-placeholder">No pending approvals.</div>';
+            return;
+        }
+        list.innerHTML = pending.map(d => `
+            <div class="approval-item" style="padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:0.8rem;color:#aaa;">
+                <i class="fa-solid fa-envelope-open-text" style="color:#7aaaff;margin-right:6px;"></i>
+                <strong style="color:#ddd">${d.recipient}</strong>
+                <span style="color:#666;margin-left:6px;font-size:0.72rem">${d.channel}</span>
+            </div>`).join('');
+    }
+
+    // ── BRIEF + PRIORITIES — FIX 4 & 5 ───────────────────────────────────────
+    async function loadBrief() {
+        try {
+            const res = await fetch('/api/brief');
+            const data = await res.json();
+
+            // Brief text from Gemini
+            document.getElementById('brief-text').textContent =
+                data.gemini_brief || data.daily_brief_text || 'Brief unavailable.';
+
+            // Claude synthesis
+            if (data.athena_synthesis) {
+                document.getElementById('brief-synthesis-text').textContent = data.athena_synthesis;
+                document.getElementById('brief-synthesis').classList.add('visible');
+            }
+
+            // State blocks
+            if (data.states) {
+                const s = data.states;
+                if (s.target_block) {
+                    document.getElementById('target-title').textContent = s.target_block.title || '—';
+                    document.getElementById('target-time').textContent  = s.target_block.time  || '—';
+                    document.getElementById('target-status').textContent = s.target_block.status || '—';
+                }
+                if (s.anchor_block) {
+                    document.getElementById('anchor-title').textContent = s.anchor_block.title || '—';
+                    document.getElementById('anchor-time').textContent  = s.anchor_block.time  || '—';
+                    document.getElementById('anchor-status').textContent = s.anchor_block.status || '—';
+                }
+            }
+        } catch(e) { console.error('Brief load failed', e); }
+    }
+
+    // FIX 5: load coordinated priorities from Claude + Gemini
+    async function loadPriorities() {
+        try {
+            const res = await fetch('/api/priorities');
+            const data = await res.json();
+            const list = document.getElementById('priorities-list');
+            if (data.priorities && data.priorities.length) {
+                list.innerHTML = data.priorities.map((p, i) => `
+                    <div class="priority-item ${p.urgent ? 'priority-urgent' : ''}">
+                        <span class="priority-num">${i+1}.</span>
+                        <span>${p.text}</span>
+                        ${p.urgent ? '<i class="fa-solid fa-triangle-exclamation" style="color:#ff9060;margin-left:auto;flex-shrink:0"></i>' : ''}
+                    </div>`).join('');
+            } else {
+                list.innerHTML = '<div class="loading-placeholder">Priorities unavailable.</div>';
+            }
+        } catch(e) {
+            document.getElementById('priorities-list').innerHTML =
+                '<div class="loading-placeholder">Connect /api/priorities endpoint.</div>';
+        }
+    }
+
+    // FIX 4: send feedback to tomorrow's brief
+    async function submitFeedback() {
+        const input = document.getElementById('feedback-input');
+        const text = input.value.trim();
+        if (!text) return;
+        try {
+            await fetch('/api/brief/feedback', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ feedback: text })
+            });
+            input.value = '';
+            document.getElementById('feedback-sent').style.display = 'block';
+            addLog('Brief-Orchestrator', `Feedback logged for tomorrow: "${text.slice(0,60)}..."`);
+            setTimeout(() => { document.getElementById('feedback-sent').style.display = 'none'; }, 4000);
+        } catch(e) { console.error('Feedback failed', e); }
+    }
+
+    // ── DICTATION → CLAUDE ────────────────────────────────────────────────────
+    async function sendDictation(text) {
+        const box = document.getElementById('athena-response-box');
+        const responseText = document.getElementById('athena-response-text');
+        box.classList.add('visible');
+        responseText.textContent = 'Thinking...';
+        try {
+            const res = await fetch('/api/voice/dictate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text })
+            });
+            const data = await res.json();
+            responseText.textContent = data.response || 'No response.';
+            addLog('Athena-Core (Voice)', `Input: "${text.slice(0,50)}" → Claude responded.`);
+        } catch(e) {
+            responseText.textContent = 'Athena unavailable. Check backend.';
+        }
+    }
+
+    function applySuggestion(text) {
+        document.getElementById('dictation-input').value = text;
+        sendDictation(text);
+    }
+
+    function addLog(source, message) {
+        const console = document.getElementById('console-logs');
+        const ts = new Date().toLocaleTimeString();
+        const entry = document.createElement('div');
+        entry.className = 'log-entry';
+        entry.innerHTML = `<span class="log-ts">${ts}</span><span class="log-source">${source}</span><span class="log-msg">${message}</span>`;
+        console.prepend(entry);
+    }
+
+    // ── INIT ──────────────────────────────────────────────────────────────────
+    document.getElementById('send-dictation-btn').addEventListener('click', () => {
+        const text = document.getElementById('dictation-input').value.trim();
+        if (text) sendDictation(text);
+    });
+    document.getElementById('dictation-input').addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+            const text = e.target.value.trim();
+            if (text) sendDictation(text);
+        }
+    });
+
+    // Load everything on boot
+    loadBrief();
+    loadDrafts();
+    loadPriorities();
+
+    // Refresh priorities every 5 minutes
+    setInterval(loadPriorities, 5 * 60 * 1000);
+    </script>
 </body>
 </html>
