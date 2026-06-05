@@ -8,3 +8,4 @@ google-auth-oauthlib>=1.2.0
 google-api-python-client>=2.127.0
 supabase>=2.0.0
 apscheduler>=3.10.0
+pytz
