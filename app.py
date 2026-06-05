@@ -28,9 +28,26 @@ CORS(app, origins=[
 ])
 
 # ── API Clients ────────────────────────────────────────────────────────────────
-anthropic_client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-gemini_model = genai.GenerativeModel("gemini-1.5-flash")
+anthropic_client = None
+anthropic_key = os.getenv("ANTHROPIC_API_KEY")
+if anthropic_key:
+    try:
+        anthropic_client = anthropic.Anthropic(api_key=anthropic_key)
+    except Exception as e:
+        print(f"[ERROR] Failed to initialize Anthropic client: {e}")
+else:
+    print("[WARNING] ANTHROPIC_API_KEY is missing from environment. Claude integration will be disabled.")
+
+gemini_model = None
+google_key = os.getenv("GOOGLE_API_KEY")
+if google_key:
+    try:
+        genai.configure(api_key=google_key)
+        gemini_model = genai.GenerativeModel("gemini-1.5-flash")
+    except Exception as e:
+        print(f"[ERROR] Failed to initialize Gemini model: {e}")
+else:
+    print("[WARNING] GOOGLE_API_KEY is missing from environment. Gemini integration will be disabled.")
 
 # Initialize Supabase client
 supabase_url = os.getenv("SUPABASE_URL")
@@ -236,6 +253,8 @@ brief_feedback_log = []
 # ── Helper: Call Claude ────────────────────────────────────────────────────────
 def ask_claude(user_message: str, context: str = "") -> str:
     """Send a message to Claude with Athena's system prompt."""
+    if not anthropic_client:
+        return "Claude unavailable: ANTHROPIC_API_KEY is not configured in settings."
     try:
         full_message = user_message
         if context:
@@ -254,6 +273,8 @@ def ask_claude(user_message: str, context: str = "") -> str:
 # ── Helper: Call Gemini ────────────────────────────────────────────────────────
 def generate_brief_with_gemini(raw_data: dict) -> str:
     """Use Gemini to generate a structured daily brief from raw data."""
+    if not gemini_model:
+        return "Gemini brief unavailable: GOOGLE_API_KEY is not configured in settings."
     try:
         prompt = f"""
         Generate a concise, structured daily brief for Natasha Bajc based on this data:

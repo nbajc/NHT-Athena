@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "123456789012",
-    "project_id": "athena-mock-project",
-    "storage_bucket": "athena-mock-project.appspot.com"
+    "project_number": "811006944062",
+    "project_id": "nht-athena",
+    "storage_bucket": "nht-athena.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:123456789012:android:abcdef0123456789",
+        "mobilesdk_app_id": "1:811006944062:android:91d2d259debc3833bdc26f",
         "android_client_info": {
           "package_name": "com.nexushestia.athena"
         }
@@ -15,12 +15,12 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyMockKeyForBuildingSuccessfully"
+          "current_key": "AIzaSyASjDaLkJODc-jtrJe5znAv9HLW4dPcsq0"
         }
       ],
       "services": {
         "appinvite_service": {
-          "status": 1
+          "other_platform_oauth_client": []
         }
       }
     }
