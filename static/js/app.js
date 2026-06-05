@@ -429,6 +429,9 @@ async function reworkDraft(id) {
     
     if (!instruction) return;
     
+    const textarea = document.getElementById(`textarea-${id}`);
+    const currentPayload = textarea ? textarea.value : null;
+    
     addSimulatedSystemLog("User (Rework Feedback)", `Requested Athena to revise draft ${id}: "${instruction}"`);
     speakAthena(`Revising the draft for ${id}. Please hold.`);
     
@@ -438,7 +441,7 @@ async function reworkDraft(id) {
         const res = await fetch(`${apiBase}/api/comms/rework`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ id: id, instruction: instruction })
+            body: JSON.stringify({ id: id, instruction: instruction, payload: currentPayload })
         });
         const data = await res.json();
         

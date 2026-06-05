@@ -332,6 +332,7 @@ def rework_draft():
     data = request.json or {}
     draft_id = data.get("id")
     instruction = data.get("instruction", "")
+    current_payload = data.get("payload")
 
     if not draft_id or draft_id not in comms_drafts:
         return jsonify({"success": False, "error": "Invalid Draft ID"}), 400
@@ -343,12 +344,15 @@ def rework_draft():
     if draft["status"] == "Executed / Sent":
         return jsonify({"success": False, "error": "Cannot rework an already executed draft"}), 400
 
+    # Use the edited textarea contents if available, otherwise the original stored draft payload
+    base_text = current_payload if current_payload else draft["payload"]
+
     # Call Claude to rewrite the message based on feedback
     prompt = f"""
     Rework this communication draft to {draft['recipient']} based on the following instruction: "{instruction}"
     
-    ORIGINAL DRAFT:
-    {draft['payload']}
+    ORIGINAL DRAFT / BASE TEXT:
+    {base_text}
     
     Ensure you match Natasha's voice (intelligent, warm, direct, no corporate filler). Return only the revised message text. No introductory remarks.
     """
