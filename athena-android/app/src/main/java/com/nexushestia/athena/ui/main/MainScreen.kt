@@ -1,4 +1,4 @@
-package com.example.athena.ui.main
+package com.nexushestia.athena.ui.main
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.Text
@@ -9,8 +9,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.NavKey
-import com.example.athena.data.DefaultDataRepository
-import com.example.athena.theme.AthenaTheme
+import com.nexushestia.athena.data.DefaultDataRepository
+import com.nexushestia.athena.theme.AthenaTheme
 
 @Composable
 fun MainScreen(

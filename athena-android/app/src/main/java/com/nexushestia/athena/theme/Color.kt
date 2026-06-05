@@ -1,4 +1,4 @@
-package com.example.athena.theme
+package com.nexushestia.athena.theme
 
 import androidx.compose.ui.graphics.Color
 

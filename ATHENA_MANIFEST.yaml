@@ -1,0 +1,396 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# ATHENA — ANTIGRAVITY BUILD MANIFEST
+# Nexus Hestia Technologies
+# Version: 2.2 | Architect: Natasha Bajc
+# Stack: Flask + Claude + Gemini + Supabase + Railway + Bluehost + Pixel APK
+# ═══════════════════════════════════════════════════════════════════════════════
+
+project:
+  name: NHT-Athena
+  version: "2.2"
+  repo: https://github.com/nbajc/NHT-Athena
+  owner: natasha.bajc@nexushestia.com
+  description: >
+    Athena is Natasha's sovereign AI executive assistant.
+    She runs always-on, coordinates Gemini Daily Brief with Claude reasoning,
+    manages comms with HITL approval, learns from feedback (RL),
+    and is accessible via dashboard and Pixel APK.
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 1. ARCHITECTURE
+# ═══════════════════════════════════════════════════════════════════════════════
+
+architecture:
+  dashboard:
+    url: https://athena.nexushestia.com
+    host: Bluehost (nexushestia.com subdomain)
+    type: Responsive single-page dashboard
+    responsive: true
+    strategy: clamp() fluid typography + CSS Grid auto-fit + 44px touch targets
+    breakpoints:
+      desktop: 4-column grid
+      tablet:  2-column grid
+      mobile:  1-column stack (APK WebView)
+    files:
+      - templates/index.html
+      - static/css/styles.css
+      - static/js/app.js
+      - static/intricateNHT.png
+      - static/reducedNHT.png
+
+  backend:
+    url: https://api.athena.nexushestia.com
+    host: Railway (always-on, never sleeps)
+    type: Flask Python API
+    entry: app.py
+    port: 5000
+    always_on: true
+    cron_jobs:
+      - name: morning_brief
+        schedule: "0 7 * * *"          # 7:00 AM daily
+        endpoint: /api/brief/generate
+        description: >
+          Gemini pulls Google Calendar + Gmail.
+          Claude synthesizes priorities through Natasha's lens.
+          Supabase stores brief. APK push notification fires.
+
+  database:
+    provider: Supabase
+    purpose:
+      - Daily brief history
+      - Feedback loop store (RL training data)
+      - Offline queue (APK dictations when no signal)
+      - Comms draft history (approved / rejected)
+      - Priority history (for RL pattern learning)
+    tables:
+      - briefs          # daily brief records
+      - feedback        # user feedback per brief
+      - drafts          # comms draft history with outcome
+      - priorities      # daily priority lists with outcomes
+      - rl_signals      # reinforcement learning signal store
+      - offline_queue   # APK offline dictation queue
+
+  apk:
+    platform: Android (Pixel)
+    type: WebView wrapper + native services
+    webview_url: https://athena.nexushestia.com
+    background_service: true
+    capabilities:
+      - Push notifications (morning brief at 7:00 AM)
+      - Lock screen approval buttons (approve/reject drafts)
+      - Native voice input → Railway API → Claude
+      - Offline queue (SQLite local store → sync on reconnect)
+      - Persistent background service (survives screen off)
+    build_tool: Android Studio (Kotlin)
+    entry: athena-android/
+    sync_method: >
+      APK is a WebView wrapper — same frontend as athena.nexushestia.com.
+      No separate UI codebase. Native layer adds push + offline + voice only.
+
+  google_home:
+    status: DEFERRED — v3 after seed round closes
+    reason: Requires Google Action + verified domain + OAuth approval (2-3 days)
+    interim: >
+      "Hey Google, open Athena" launches APK.
+      Full Action integration scheduled post-funding.
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 2. FILE STRUCTURE
+# ═══════════════════════════════════════════════════════════════════════════════
+
+file_structure:
+  root: NHT-Athena/
+  files:
+    - path: app.py
+      description: Flask backend — all API endpoints
+      status: ACTIVE — Claude + Gemini wired in
+
+    - path: requirements.txt
+      description: Python dependencies
+      must_include:
+        - flask>=3.0.2
+        - flask-cors>=4.0.0
+        - python-dotenv>=1.0.1
+        - anthropic>=0.25.0
+        - google-generativeai>=0.5.0
+        - google-auth>=2.29.0
+        - google-auth-oauthlib>=1.2.0
+        - google-api-python-client>=2.127.0
+        - supabase>=2.0.0
+        - apscheduler>=3.10.0     # for Railway cron jobs
+
+    - path: templates/index.html
+      description: Responsive dashboard — single source of truth for desktop + APK WebView
+      status: NEEDS DEPLOY to athena.nexushestia.com via Bluehost
+
+    - path: static/css/styles.css
+      description: Dashboard styles — NHT design system
+      fonts: [Bebas Neue, Space Mono, DM Sans, Cormorant Garamond]
+      colors:
+        background: "#0A0A0A"
+        accent_primary: "#7aaaff"
+        accent_success: "#3cdc78"
+        accent_warning: "#ffc83c"
+        accent_danger: "#ff5050"
+
+    - path: static/js/app.js
+      description: Dashboard JS — API calls, draft engine, priorities, feedback
+      status: NEEDS UPGRADE (see endpoints below)
+
+    - path: .env
+      description: Local secrets — NEVER pushed to git
+      keys:
+        - ANTHROPIC_API_KEY
+        - GOOGLE_API_KEY
+        - GOOGLE_CLIENT_SECRET_FILE
+        - SUPABASE_URL
+        - SUPABASE_KEY
+
+    - path: .env.example
+      description: Key names only — safe for git
+      status: IN REPO
+
+    - path: railway.toml
+      description: Railway deployment config
+      content: |
+        [build]
+        builder = "NIXPACKS"
+        [deploy]
+        startCommand = "python app.py"
+        restartPolicyType = "ON_FAILURE"
+
+    - path: Procfile
+      description: Railway process declaration
+      content: "web: python app.py"
+
+    - path: athena-android/
+      description: Android APK project (Kotlin + WebView + native services)
+      key_files:
+        - athena-android/app/src/main/java/com/nht/athena/MainActivity.kt
+        - athena-android/app/src/main/java/com/nht/athena/AthenaService.kt
+        - athena-android/app/src/main/java/com/nht/athena/OfflineQueue.kt
+        - athena-android/app/src/main/java/com/nht/athena/PushReceiver.kt
+        - athena-android/app/src/main/res/layout/activity_main.xml
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 3. API ENDPOINTS — app.py
+# ═══════════════════════════════════════════════════════════════════════════════
+
+endpoints:
+  - route: GET /api/config
+    description: Sovereignty config + agent identity
+    status: DONE
+
+  - route: GET /api/brief
+    description: >
+      Gemini pulls live Google Calendar + Gmail.
+      Claude synthesizes into prioritized brief.
+      Stores to Supabase. Returns to dashboard.
+    status: NEEDS GOOGLE OAUTH WIRED IN
+    removes: all hardcoded raw_data strings
+
+  - route: GET /api/priorities
+    description: >
+      Gemini structures today's tasks.
+      Claude returns JSON priority array with urgent flags.
+      Nothing hardcoded — all from live Google data.
+    status: NEEDS GOOGLE OAUTH WIRED IN
+    removes: hardcoded fallback priorities list
+
+  - route: POST /api/brief/feedback
+    description: >
+      Stores user feedback to Supabase rl_signals table.
+      Injected into next morning's brief generation.
+    status: DONE — needs Supabase write connected
+
+  - route: POST /api/voice/dictate
+    description: Voice/text → Claude → response
+    status: DONE
+
+  - route: POST /api/ask
+    description: Direct question to Athena/Claude
+    status: DONE
+
+  - route: GET /api/comms/drafts
+    description: Returns pending drafts
+    status: DONE — remove hardcoded startup drafts
+
+  - route: POST /api/comms/draft/generate
+    description: Claude generates new draft on request
+    status: DONE
+
+  - route: POST /api/comms/approve
+    description: HITL approval gate — executes broadcast
+    status: DONE
+
+  - route: POST /api/comms/reject
+    description: >
+      Marks draft rejected. Stores outcome to Supabase drafts table
+      (RL signal: this type of draft was rejected).
+      Returns repeat_tomorrow flag.
+    status: NEEDS BUILD
+
+  - route: GET /api/devops/telemetry
+    description: Latency, gateway status
+    status: DONE
+
+  - route: GET /api/logs
+    description: System audit trail
+    status: DONE
+
+  - route: POST /api/brief/generate
+    description: >
+      Railway cron job endpoint — triggered at 7:00 AM daily.
+      Full Gemini + Claude brief pipeline.
+      Stores to Supabase. Triggers APK push notification.
+    status: NEEDS BUILD
+
+  - route: POST /api/offline/sync
+    description: >
+      APK sends queued offline dictations on reconnect.
+      Processes in order. Returns results batch.
+    status: NEEDS BUILD
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 4. HARDCODED VALUES TO REMOVE — replace with live Google API data
+# ═══════════════════════════════════════════════════════════════════════════════
+
+remove_hardcoded:
+  in_app_py:
+    - orchestrator_states dict — replace with Supabase read + Google Calendar live
+    - raw_data in /api/brief — replace with Google Calendar + Gmail OAuth pull
+    - raw_data in /api/priorities — same
+    - comms_drafts startup dict — remove; drafts only from Claude generation or Supabase
+    - fallback priorities list — replace with graceful error + last known from Supabase
+
+  in_index_html:
+    - Timeline block titles and dates — pull from /api/brief response
+    - "Denis + Mama Exam Prep" hardcoded text — from live brief
+    - State block statuses — from Supabase
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 5. REINFORCEMENT LEARNING — how Athena learns
+# ═══════════════════════════════════════════════════════════════════════════════
+
+reinforcement_learning:
+  approach: lightweight feedback loop — no ML framework needed at this scale
+  signals:
+    - type: draft_approved
+      weight: +1
+      stored: Supabase drafts table
+      learns: which recipient + channel combinations Natasha approves
+
+    - type: draft_rejected
+      weight: -1
+      stored: Supabase drafts table
+      learns: which draft styles / tones get rejected
+
+    - type: brief_feedback
+      weight: contextual
+      stored: Supabase rl_signals table
+      learns: what Gemini missed, what Claude should prioritize
+
+    - type: priority_actioned
+      weight: +1
+      stored: Supabase priorities table
+      learns: which priority types Natasha acts on vs ignores
+
+    - type: priority_ignored
+      weight: -1
+      stored: Supabase priorities table
+      learns: what to deprioritize in future briefs
+
+  injection_point: >
+    Each morning when /api/brief/generate runs, the last 7 days of RL signals
+    are pulled from Supabase and injected into the Claude system prompt as context.
+    Claude adjusts tone, priority ordering, and draft style accordingly.
+    No separate ML model needed — Claude IS the learning layer.
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 6. DEPLOYMENT — step by step for Antigravity
+# ═══════════════════════════════════════════════════════════════════════════════
+
+deployment:
+  step_1_railway:
+    action: Deploy Flask backend to Railway
+    steps:
+      - Connect GitHub repo nbajc/NHT-Athena to Railway
+      - Set environment variables from .env in Railway dashboard
+      - Add railway.toml and Procfile to repo root
+      - Deploy — Railway auto-builds on every git push
+      - Set custom domain: api.athena.nexushestia.com
+      - Add CNAME in Bluehost: api.athena → railway-app-url.railway.app
+
+  step_2_bluehost:
+    action: Deploy dashboard to athena.nexushestia.com
+    steps:
+      - In Bluehost cPanel → Subdomains → create athena.nexushestia.com
+      - Upload templates/index.html, static/ folder to subdomain root
+      - Dashboard is live — no build step needed (pure HTML/CSS/JS)
+      - Update CORS in app.py to allow https://athena.nexushestia.com
+
+  step_3_supabase:
+    action: Connect Supabase and create tables
+    steps:
+      - Create tables: briefs, feedback, drafts, priorities, rl_signals, offline_queue
+      - Add SUPABASE_URL and SUPABASE_KEY to Railway env vars
+      - Wire supabase-py client into app.py
+
+  step_4_google_oauth:
+    action: Wire Google Calendar + Gmail OAuth
+    steps:
+      - Google Cloud Console → Enable Calendar API + Gmail API
+      - Create OAuth 2.0 credentials → download credentials.json
+      - Add to Railway as environment variable GOOGLE_CREDENTIALS_JSON
+      - Wire google-auth-oauthlib into /api/brief endpoint
+      - Test: brief pulls real calendar events and emails
+
+  step_5_apk:
+    action: Build Pixel APK
+    steps:
+      - Open athena-android/ in Android Studio
+      - Set ATHENA_API_URL = https://api.athena.nexushestia.com
+      - WebView loads https://athena.nexushestia.com
+      - Build AthenaService.kt — background service, survives screen off
+      - Build OfflineQueue.kt — SQLite local store, sync on reconnect
+      - Build PushReceiver.kt — Firebase Cloud Messaging for morning brief
+      - Sign APK and sideload to Pixel (no Play Store needed)
+
+  step_6_cron:
+    action: Enable Railway cron for morning brief
+    steps:
+      - Add APScheduler to app.py
+      - Schedule /api/brief/generate at 07:00 AM daily
+      - Brief stored to Supabase
+      - Push notification sent to Pixel via Firebase
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 7. VOICE — Claude voice on explicit request only
+# ═══════════════════════════════════════════════════════════════════════════════
+
+voice:
+  mode: explicit_only
+  trigger: user taps mic button OR types in dictation field
+  never: auto-listening, ambient, always-on mic
+  apk_behavior: >
+    Mic button in APK activates native Android speech recognition.
+    Transcript sent to /api/voice/dictate.
+    Claude responds in text on dashboard.
+    Optional: Claude response read aloud only if user taps speaker icon.
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 8. SOVEREIGNTY GUARDRAILS — non-negotiable
+# ═══════════════════════════════════════════════════════════════════════════════
+
+sovereignty:
+  no_behavioral_telemetry: true
+  no_third_party_tracking: true
+  hitl_required_for_all_outbound: true
+  data_residency: Supabase (your account, your data)
+  api_keys: Railway environment variables only — never in code or git
+  rl_data: stored in your Supabase — never sent to third parties
+  voice: explicit trigger only — no ambient listening ever
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# END OF MANIFEST
+# ═══════════════════════════════════════════════════════════════════════════════

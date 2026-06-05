@@ -1,9 +1,9 @@
-package com.example.athena.ui.main
+package com.nexushestia.athena.ui.main
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.athena.data.DataRepository
-import com.example.athena.ui.main.MainScreenUiState.Success
+import com.nexushestia.athena.data.DataRepository
+import com.nexushestia.athena.ui.main.MainScreenUiState.Success
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch

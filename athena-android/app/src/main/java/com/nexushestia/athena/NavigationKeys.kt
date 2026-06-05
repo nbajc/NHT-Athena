@@ -1,4 +1,4 @@
-package com.example.athena
+package com.nexushestia.athena
 
 import androidx.navigation3.runtime.NavKey
 import kotlinx.serialization.Serializable

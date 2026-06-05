@@ -1,4 +1,4 @@
-package com.example.athena.data
+package com.nexushestia.athena.data
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow

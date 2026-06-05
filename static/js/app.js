@@ -1,4 +1,4 @@
-// State variables
+// ── STATE VARIABLES ───────────────────────────────────────────────────────────
 let apiBase = window.location.origin;
 let isRecording = false;
 let canvas, ctx, animationFrameId;
@@ -11,39 +11,50 @@ let mockDictationPhrases = [
 ];
 let dictationIndex = 0;
 let athenaVoice = null;
+let draftsData = {};
 
-// Initialize on DOM load
+// ── DOM LOAD INITIALIZATION ───────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
     initTimeClocks();
     initWaveformCanvas();
     initAthenaVoice();
-    fetchBriefData();
-    fetchCommsDrafts();
+    
+    // Core loads
+    loadBrief();
+    loadDrafts();
+    loadPriorities();
     fetchTelemetryData();
     fetchLogs();
     
-    // Set up polling loops
-    setInterval(fetchTelemetryData, 4000);
-    setInterval(fetchCommsDrafts, 5000);
-    setInterval(fetchLogs, 5000);
+    // Polling schedules
     setInterval(initTimeClocks, 1000);
+    setInterval(fetchTelemetryData, 4000);
+    setInterval(loadDrafts, 5000);
+    setInterval(fetchLogs, 5000);
+    setInterval(loadPriorities, 5 * 60 * 1000); // 5 min
     
-    // Add Event Listeners
+    // Event listeners
     document.getElementById("mic-btn").addEventListener("click", toggleVoiceRecording);
     document.getElementById("send-dictation-btn").addEventListener("click", submitTextDictation);
     document.getElementById("dictation-input").addEventListener("keypress", (e) => {
         if (e.key === 'Enter') submitTextDictation();
     });
+    
+    // Wire Google Auth clickable trigger
+    const googleAuthBtn = document.getElementById("google-auth-btn");
+    if (googleAuthBtn) {
+        googleAuthBtn.addEventListener("click", startGoogleAuth);
+        googleAuthBtn.style.cursor = "pointer";
+        googleAuthBtn.title = "Click to authenticate Google Account (Calendar & Gmail)";
+    }
 });
 
-// Text-to-Speech (TTS) Female Voice Integration
+// ── TEXT-TO-SPEECH (TTS) ATHENA VOICE ──────────────────────────────────────────
 function initAthenaVoice() {
     if (!('speechSynthesis' in window)) return;
     
     const setVoice = () => {
         const voices = window.speechSynthesis.getVoices();
-        // Look for a female voice in English
-        // Common female voice names: Microsoft Zira, Google US English (has female quality), Samantha, Karen, Victoria, Hazel, etc.
         athenaVoice = voices.find(v => 
             v.lang.startsWith('en') && 
             (v.name.toLowerCase().includes('female') || 
@@ -56,7 +67,6 @@ function initAthenaVoice() {
              v.name.toLowerCase().includes('natural'))
         );
         if (!athenaVoice) {
-            // fallback to any English voice
             athenaVoice = voices.find(v => v.lang.startsWith('en'));
         }
     };
@@ -69,30 +79,29 @@ function initAthenaVoice() {
 
 function speakAthena(text) {
     if (!('speechSynthesis' in window)) return;
-    // Cancel any ongoing speech
     window.speechSynthesis.cancel();
     
     const utterance = new SpeechSynthesisUtterance(text);
     if (athenaVoice) {
         utterance.voice = athenaVoice;
     }
-    // Adjust pitch and rate to sound more natural and pleasant
-    utterance.pitch = 1.05; // slightly higher pitch to emphasize female tone
+    utterance.pitch = 1.05;
     utterance.rate = 1.0;
     window.speechSynthesis.speak(utterance);
 }
 
-// 1. Time Clocks (Local & Belgrade)
+// ── TIME CLOCKS (LOCAL & BELGRADE) ────────────────────────────────────────────
 function initTimeClocks() {
     const localTimeEl = document.getElementById("local-time");
     const belgradeTimeEl = document.getElementById("belgrade-time");
+    if (!localTimeEl || !belgradeTimeEl) return;
     
     const now = new Date();
     
-    // Local Time
+    // Local clock
     localTimeEl.textContent = now.toTimeString().split(' ')[0];
     
-    // Belgrade Time (+9 hours relative to typical US Pacific time, or calculated via UTC offset)
+    // Belgrade clock (+9 hours or calculated via IANA timeZone)
     try {
         const options = {
             timeZone: 'Europe/Belgrade',
@@ -109,18 +118,19 @@ function initTimeClocks() {
     }
 }
 
-// 2. Waveform Canvas Animation
+// ── WAVEFORM CANVAS ANIMATION ──────────────────────────────────────────────────
 function initWaveformCanvas() {
     canvas = document.getElementById("waveform-canvas");
+    if (!canvas) return;
     ctx = canvas.getContext("2d");
     
     resizeCanvas();
     window.addEventListener("resize", resizeCanvas);
-    
     drawWave();
 }
 
 function resizeCanvas() {
+    if (!canvas) return;
     const rect = canvas.parentElement.getBoundingClientRect();
     canvas.width = rect.width;
     canvas.height = rect.height;
@@ -128,6 +138,7 @@ function resizeCanvas() {
 
 let phase = 0;
 function drawWave() {
+    if (!canvas || !ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     const waveCount = isRecording ? 4 : 2;
@@ -148,8 +159,6 @@ function drawWave() {
             ? 0.02 + i * 0.005 
             : 0.01 + i * 0.003;
             
-        const speed = isRecording ? 0.15 : 0.05;
-        
         for (let x = 0; x < canvas.width; x++) {
             const y = canvas.height / 2 + Math.sin(x * frequency + phase + i) * amplitude;
             if (x === 0) {
@@ -165,7 +174,7 @@ function drawWave() {
     animationFrameId = requestAnimationFrame(drawWave);
 }
 
-// 3. Voice Recording Simulation
+// ── VOICE RECORDING SIMULATOR ──────────────────────────────────────────────────
 function toggleVoiceRecording() {
     const micBtn = document.getElementById("mic-btn");
     const inputField = document.getElementById("dictation-input");
@@ -183,30 +192,53 @@ function toggleVoiceRecording() {
                 inputField.value = phrase;
                 toggleVoiceRecording();
                 
-                addSimulatedSystemLog("Athena-Core (Voice)", `Mobile audio transcribed: "${phrase}"`);
+                addSimulatedSystemLog("Athena-Core (Voice)", `Audio transcribed: "${phrase}"`);
                 speakAthena(`Transcribed input: ${phrase}`);
+                submitTextDictation();
             }
         }, 2500);
     } else {
         micBtn.classList.remove("active");
-        inputField.placeholder = "Type a verbal instruction or command...";
+        inputField.placeholder = "Ask Athena anything...";
     }
 }
 
 function applySuggestion(phrase) {
     document.getElementById("dictation-input").value = phrase;
-    addSimulatedSystemLog("Athena-Core (Interface)", `Applied quick input template: "${phrase}"`);
+    addSimulatedSystemLog("Athena-Core (Interface)", `Quick template: "${phrase}"`);
     speakAthena(`Selected query: ${phrase}`);
+    submitTextDictation();
 }
 
-// 4. Submit Dictation / Text Action
+// ── GOOGLE OAUTH FLOW ──────────────────────────────────────────────────────────
+async function startGoogleAuth() {
+    addSimulatedSystemLog("Google Auth", "Initiating client handshake...");
+    try {
+        const res = await fetch(`${apiBase}/api/auth/google`);
+        const data = await res.json();
+        if (data.success && data.authorization_url) {
+            window.location.href = data.authorization_url;
+        } else {
+            addSimulatedSystemLog("Google Auth", `Authentication failed: ${data.error}`);
+        }
+    } catch(e) {
+        console.error("handshake failed", e);
+        addSimulatedSystemLog("Google Auth", "Handshake connection error.");
+    }
+}
+
+// ── DICTATION → CLAUDE ─────────────────────────────────────────────────────────
 async function submitTextDictation() {
     const input = document.getElementById("dictation-input");
     const text = input.value.trim();
-    
     if (!text) return;
     
     input.value = "";
+    const box = document.getElementById('athena-response-box');
+    const responseText = document.getElementById('athena-response-text');
+    
+    box.classList.add('visible');
+    responseText.textContent = 'Thinking...';
     
     addSimulatedSystemLog("User (Voice/Dictation)", text);
     
@@ -217,37 +249,216 @@ async function submitTextDictation() {
             body: JSON.stringify({ text: text })
         });
         const data = await res.json();
-        
         if (data.success) {
-            addSimulatedSystemLog("Athena-Core", data.response);
+            responseText.textContent = data.response || 'Processed.';
             speakAthena(data.response);
             fetchLogs();
+        } else {
+            responseText.textContent = data.error || 'Execution failed.';
         }
     } catch (e) {
-        console.error("Error submitting dictation:", e);
-        addSimulatedSystemLog("System", "Failed to communicate with Athena core agent endpoint.");
-        speakAthena("Communication failure with Athena core.");
+        console.error(e);
+        responseText.textContent = 'Athena core offline.';
     }
 }
 
-// 5. Fetch Daily Brief
-async function fetchBriefData() {
+// ── DRAFT ENGINE LOGIC (CONSOLIDATED) ──────────────────────────────────────────
+async function loadDrafts() {
+    try {
+        const res = await fetch(`${apiBase}/api/comms/drafts`);
+        const drafts = await res.json();
+        draftsData = {};
+        drafts.forEach(d => { draftsData[d.id] = d; });
+        renderDrafts();
+        renderApprovalsQueue();
+    } catch(e) { console.error('Drafts load failed', e); }
+}
+
+function renderDrafts() {
+    const container = document.getElementById('drafts-container');
+    if (!container) return;
+    
+    const pending = Object.values(draftsData).filter(d => d.status === 'Pending Approval');
+    if (!pending.length) {
+        container.innerHTML = '<div class="loading-placeholder">No pending drafts.</div>';
+        return;
+    }
+    container.innerHTML = pending.map(d => buildDraftCard(d)).join('');
+}
+
+function buildDraftCard(d) {
+    return `
+    <div class="draft-card" id="draft-card-${d.id}">
+        <div class="draft-card-header">
+            <div>
+                <span class="draft-channel">${d.channel}</span>
+                <span class="draft-recipient">to ${d.recipient}</span>
+            </div>
+            <span class="draft-status pending" id="draft-status-${d.id}">PENDING APPROVAL</span>
+        </div>
+
+        <textarea class="draft-textarea" id="textarea-${d.id}" readonly>${escapeHtml(d.payload)}</textarea>
+
+        <div class="draft-action-bar" id="actions-${d.id}">
+            <span class="broadcast-badge"><i class="fa-solid fa-tower-broadcast"></i> ${d.broadcast_type}</span>
+            <div class="btn-group">
+                <button class="btn-edit" id="edit-btn-${d.id}" onclick="editDraft('${d.id}')">
+                    <i class="fa-solid fa-pen"></i> Edit
+                </button>
+                <button class="btn-save" id="save-btn-${d.id}" style="display:none;" onclick="saveDraft('${d.id}')">
+                    <i class="fa-solid fa-floppy-disk"></i> Save
+                </button>
+                <button class="reject-btn" onclick="rejectDraft('${d.id}')">
+                    <i class="fa-solid fa-ban"></i> Reject
+                </button>
+                <button class="approve-full-btn" onclick="approveDraft('${d.id}')">
+                    <i class="fa-solid fa-circle-check"></i> Approve & Send
+                </button>
+            </div>
+        </div>
+
+        <div class="repeat-prompt" id="repeat-prompt-${d.id}" style="display:none; margin-top:10px; padding:10px; border:1px solid rgba(255,100,100,0.3); border-radius:6px; background:rgba(255,100,100,0.05); justify-content:space-between; align-items:center;">
+            <span style="font-size:0.75rem; color:#ff6b6b;"><i class="fa-solid fa-clock"></i> Draft rejected. Queue this to repeat tomorrow?</span>
+            <div>
+                <button style="background:rgba(255,100,100,0.2); border:1px solid #ff5050; color:#ff5050; padding:4px 8px; border-radius:4px; font-size:0.7rem; cursor:pointer;" onclick="repeatTomorrow('${d.id}', true)">YES, TOMORROW</button>
+                <button style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.2); color:#fff; padding:4px 8px; border-radius:4px; font-size:0.7rem; cursor:pointer; margin-left:6px;" onclick="repeatTomorrow('${d.id}', false)">NO, DISMISS</button>
+            </div>
+        </div>
+    </div>`;
+}
+
+function editDraft(id) {
+    const ta = document.getElementById(`textarea-${id}`);
+    const editBtn = document.getElementById(`edit-btn-${id}`);
+    const saveBtn = document.getElementById(`save-btn-${id}`);
+    if (!ta) return;
+    
+    ta.removeAttribute('readonly');
+    ta.focus();
+    editBtn.style.display = 'none';
+    saveBtn.style.display = 'inline-block';
+    addSimulatedSystemLog('Comms-Draft-Engine', `Draft for ${draftsData[id]?.recipient} opened for editing.`);
+}
+
+function saveDraft(id) {
+    const ta = document.getElementById(`textarea-${id}`);
+    const editBtn = document.getElementById(`edit-btn-${id}`);
+    const saveBtn = document.getElementById(`save-btn-${id}`);
+    if (!ta) return;
+    
+    ta.setAttribute('readonly', true);
+    editBtn.style.display = 'inline-block';
+    saveBtn.style.display = 'none';
+    if (draftsData[id]) draftsData[id].payload = ta.value;
+    addSimulatedSystemLog('Comms-Draft-Engine', `Draft edits locally staged.`);
+}
+
+async function approveDraft(id) {
+    saveDraft(id);
+    const payload = draftsData[id]?.payload;
+    try {
+        const res = await fetch(`${apiBase}/api/comms/approve`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, payload })
+        });
+        const data = await res.json();
+        if (data.success) {
+            const card = document.getElementById(`draft-card-${id}`);
+            document.getElementById(`draft-status-${id}`).className = 'draft-status sent';
+            document.getElementById(`draft-status-${id}`).textContent = 'EXECUTED / SENT';
+            document.getElementById(`actions-${id}`).innerHTML = 
+                '<span style="font-size:0.75rem;color:#47C8FF"><i class="fa-solid fa-circle-check"></i> Transmitted successfully via gateway.</span>';
+            addSimulatedSystemLog('Athena-Core', `HUMAN-IN-THE-LOOP VALIDATED: Sent draft to ${draftsData[id]?.recipient}.`);
+            setTimeout(() => { card.remove(); loadDrafts(); }, 2000);
+        }
+    } catch(e) { console.error('Approve failed', e); }
+}
+
+function rejectDraft(id) {
+    const card = document.getElementById(`draft-card-${id}`);
+    document.getElementById(`draft-status-${id}`).className = 'draft-status rejected';
+    document.getElementById(`draft-status-${id}`).textContent = 'REJECTED';
+    document.getElementById(`actions-${id}`).style.display = 'none';
+    document.getElementById(`repeat-prompt-${id}`).style.display = 'flex';
+    addSimulatedSystemLog('Comms-Draft-Engine', `Draft for ${draftsData[id]?.recipient} rejected. Awaiting repeat decision.`);
+}
+
+async function repeatTomorrow(id, repeat) {
+    try {
+        const res = await fetch(`${apiBase}/api/comms/reject`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, repeat_tomorrow: repeat })
+        });
+        const data = await res.json();
+        if (data.success) {
+            const promptBox = document.getElementById(`repeat-prompt-${id}`);
+            if (repeat) {
+                promptBox.innerHTML = '<span style="font-size:0.75rem; color:#FF6B35;"><i class="fa-solid fa-check"></i> Scheduled for tomorrow morning.</span>';
+                addSimulatedSystemLog('Comms-Draft-Engine', `Draft for ${draftsData[id]?.recipient} scheduled for tomorrow.`);
+            } else {
+                promptBox.innerHTML = '<span style="font-size:0.75rem; color:#aaa;"><i class="fa-solid fa-trash"></i> Draft permanently dismissed.</span>';
+                addSimulatedSystemLog('Comms-Draft-Engine', `Draft dismissed.`);
+            }
+            setTimeout(() => {
+                document.getElementById(`draft-card-${id}`).remove();
+                loadDrafts();
+            }, 2000);
+        }
+    } catch(e) { console.error(e); }
+}
+
+function renderApprovalsQueue() {
+    const list = document.getElementById("approvals-list");
+    if (!list) return;
+    
+    const pending = Object.values(draftsData).filter(d => d.status === 'Pending Approval');
+    if (pending.length === 0) {
+        list.innerHTML = `
+            <div class="approval-item" style="justify-content: center; border-color: rgba(71, 200, 255, 0.1); background: rgba(71, 200, 255, 0.02)">
+                <span class="approval-desc" style="color: var(--color-success)">
+                    <i class="fa-solid fa-circle-check"></i> Sovereignty Clear: No pending broadcasts
+                </span>
+            </div>
+        `;
+        return;
+    }
+    
+    list.innerHTML = pending.map(draft => `
+        <div class="approval-item">
+            <div class="approval-info">
+                <span class="approval-target">${draft.channel} (${draft.recipient})</span>
+                <span class="approval-desc">Awaiting validation</span>
+            </div>
+            <button class="approve-mini-btn" onclick="approveDraft('${draft.id}')">
+                <i class="fa-solid fa-paper-plane"></i> Send
+            </button>
+        </div>
+    `).join('');
+}
+
+// ── BRIEF SYNOPSIS LOAD ────────────────────────────────────────────────────────
+async function loadBrief() {
     try {
         const res = await fetch(`${apiBase}/api/brief`);
         const data = await res.json();
         
-        // Render brief text synthesized by Claude
-        document.getElementById("brief-text").innerHTML = data.athena_synthesis 
-            ? escapeHtml(data.athena_synthesis).replace(/\n/g, '<br>')
-            : escapeHtml(data.gemini_brief).replace(/\n/g, '<br>');
+        // Render syntheses
+        const briefText = document.getElementById("brief-text");
+        if (briefText) {
+            briefText.innerHTML = data.athena_synthesis 
+                ? escapeHtml(data.athena_synthesis).replace(/\n/g, '<br>')
+                : escapeHtml(data.gemini_brief).replace(/\n/g, '<br>');
+        }
         
         updateTimelineItem("state-routine", data.states.routine_block);
         updateTimelineItem("state-target", data.states.target_block);
         updateTimelineItem("state-anchor", data.states.anchor_block);
         
-    } catch (e) {
-        console.error("Error fetching brief:", e);
-        document.getElementById("brief-text").textContent = "Error loading Gemini daily brief state.";
+    } catch(e) {
+        console.error(e);
+        document.getElementById("brief-text").textContent = "Error loading brief.";
     }
 }
 
@@ -271,212 +482,84 @@ function updateTimelineItem(id, block) {
     }
 }
 
-// 6. Fetch Communication Drafts
-async function fetchCommsDrafts() {
+// ── PRIORITIES ENGINE LOAD ──────────────────────────────────────────────────────
+async function loadPriorities() {
     try {
-        const res = await fetch(`${apiBase}/api/comms/drafts`);
-        const drafts = await res.json();
+        const res = await fetch(`${apiBase}/api/priorities`);
+        const data = await res.json();
+        const list = document.getElementById('priorities-list');
+        if (!list) return;
         
-        renderDrafts(drafts);
-        renderApprovalsQueue(drafts);
-    } catch (e) {
-        console.error("Error fetching drafts:", e);
-    }
-}
-
-function renderDrafts(drafts) {
-    const container = document.getElementById("drafts-container");
-    container.innerHTML = "";
-    
-    drafts.forEach(draft => {
-        const card = document.createElement("div");
-        card.className = "draft-card";
-        
-        const isPending = draft.status === "Pending Approval";
-        
-        let statusClass = "pending";
-        if (draft.status === "Executed / Sent") {
-            statusClass = "sent";
-        } else if (draft.status === "Rejected") {
-            statusClass = "rejected";
+        if (data.priorities && data.priorities.length) {
+            list.innerHTML = data.priorities.map((p, i) => `
+                <div class="priority-item ${p.urgent ? 'priority-urgent' : ''}">
+                    <span class="priority-num">${i+1}.</span>
+                    <span>${escapeHtml(p.text)}</span>
+                    ${p.urgent ? '<i class="fa-solid fa-triangle-exclamation" style="color:#ff9060;margin-left:auto;flex-shrink:0"></i>' : ''}
+                </div>`).join('');
+        } else {
+            list.innerHTML = '<div class="loading-placeholder">No priorities coordinated.</div>';
         }
-        
-        card.innerHTML = `
-            <div class="draft-card-header">
-                <div>
-                    <span class="draft-channel">${draft.channel}</span>
-                    <span class="draft-recipient">to ${draft.recipient}</span>
-                </div>
-                <span class="draft-status ${statusClass}">${draft.status}</span>
-            </div>
-            
-            <textarea class="draft-textarea" id="textarea-${draft.id}" ${isPending ? "" : "disabled"} placeholder="Draft content...">${escapeHtml(draft.payload)}</textarea>
-            
-            ${isPending ? `
-            <div class="rework-input-group">
-                <input type="text" class="rework-input" id="rework-input-${draft.id}" placeholder="Athena rework instructions..." autocomplete="off">
-                <button class="rework-btn" onclick="reworkDraft('${draft.id}')">
-                    <i class="fa-solid fa-wand-magic-sparkles"></i> Rework
-                </button>
-            </div>
-            ` : ""}
-
-            <div class="draft-action-bar">
-                <span class="broadcast-badge"><i class="fa-solid fa-tower-broadcast"></i> ${draft.broadcast_type}</span>
-                
-                ${isPending ? `
-                <div class="btn-group">
-                    <button class="reject-btn" onclick="rejectDraft('${draft.id}')">
-                        <i class="fa-solid fa-ban"></i> Reject
-                    </button>
-                    <button class="approve-full-btn" onclick="approveDraft('${draft.id}')">
-                        <i class="fa-solid fa-circle-check"></i> Approve & Send
-                    </button>
-                </div>
-                ` : `
-                <button class="approve-full-btn" disabled>
-                    <i class="fa-solid fa-check-double"></i> ${draft.status}
-                </button>
-                `}
-            </div>
-        `;
-        
-        container.appendChild(card);
-    });
-}
-
-function renderApprovalsQueue(drafts) {
-    const list = document.getElementById("approvals-list");
-    list.innerHTML = "";
-    
-    const pendingDrafts = drafts.filter(d => d.status === "Pending Approval");
-    
-    if (pendingDrafts.length === 0) {
-        list.innerHTML = `
-            <div class="approval-item" style="justify-content: center; border-color: rgba(71, 200, 255, 0.1); background: rgba(71, 200, 255, 0.02)">
-                <span class="approval-desc" style="color: var(--color-success)">
-                    <i class="fa-solid fa-circle-check"></i> Sovereignty Clear: No pending broadcasts
-                </span>
-            </div>
-        `;
-        return;
+    } catch(e) {
+        console.error(e);
+        document.getElementById('priorities-list').innerHTML = '<div class="loading-placeholder">Priorities offline.</div>';
     }
-    
-    pendingDrafts.forEach(draft => {
-        const item = document.createElement("div");
-        item.className = "approval-item";
-        
-        item.innerHTML = `
-            <div class="approval-info">
-                <span class="approval-target">${draft.channel} (${draft.recipient})</span>
-                <span class="approval-desc">Awaiting human validation</span>
-            </div>
-            <button class="approve-mini-btn" onclick="approveDraft('${draft.id}')">
-                <i class="fa-solid fa-paper-plane"></i> Send
-            </button>
-        `;
-        
-        list.appendChild(item);
-    });
 }
 
-async function approveDraft(id) {
-    const textarea = document.getElementById(`textarea-${id}`);
-    const currentPayload = textarea ? textarea.value : null;
-
+// ── FEEDBACK LOOP ─────────────────────────────────────────────────────────────
+async function submitFeedback() {
+    const input = document.getElementById('feedback-input');
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text) return;
+    
     try {
-        const res = await fetch(`${apiBase}/api/comms/approve`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ id: id, payload: currentPayload })
+        const res = await fetch(`${apiBase}/api/brief/feedback`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ feedback: text })
         });
         const data = await res.json();
-        
         if (data.success) {
-            addSimulatedSystemLog("Athena-Core (Sovereignty)", `BROADCAST SUCCESS: Approved and sent draft for ${id.toUpperCase()}`);
-            speakAthena(`Outbound draft for ${data.draft.recipient} successfully approved and broadcasted.`);
-            fetchCommsDrafts();
-            fetchLogs();
+            input.value = '';
+            const feedbackSent = document.getElementById('feedback-sent');
+            feedbackSent.style.display = 'block';
+            addSimulatedSystemLog('Brief-Orchestrator', `Feedback submitted: "${text.slice(0,50)}..."`);
+            setTimeout(() => { feedbackSent.style.display = 'none'; }, 4000);
         }
-    } catch (e) {
-        console.error("Error executing draft approval:", e);
-    }
+    } catch(e) { console.error('Feedback failed', e); }
 }
 
-async function rejectDraft(id) {
-    try {
-        const res = await fetch(`${apiBase}/api/comms/reject`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ id: id })
-        });
-        const data = await res.json();
-        
-        if (data.success) {
-            addSimulatedSystemLog("Athena-Core (Sovereignty)", `DISMISSED: Outbound draft for ${id.toUpperCase()} rejected.`);
-            speakAthena(`Draft for ${data.draft.recipient} has been rejected.`);
-            fetchCommsDrafts();
-            fetchLogs();
-        }
-    } catch (e) {
-        console.error("Error executing draft rejection:", e);
-    }
-}
-
-async function reworkDraft(id) {
-    const input = document.getElementById(`rework-input-${id}`);
-    const instruction = input ? input.value.trim() : "";
-    
-    if (!instruction) return;
-    
-    const textarea = document.getElementById(`textarea-${id}`);
-    const currentPayload = textarea ? textarea.value : null;
-    
-    addSimulatedSystemLog("User (Rework Feedback)", `Requested Athena to revise draft ${id}: "${instruction}"`);
-    speakAthena(`Revising the draft for ${id}. Please hold.`);
-    
-    if (input) input.disabled = true;
-    
-    try {
-        const res = await fetch(`${apiBase}/api/comms/rework`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ id: id, instruction: instruction, payload: currentPayload })
-        });
-        const data = await res.json();
-        
-        if (data.success) {
-            addSimulatedSystemLog("Athena-Core", `Draft revised by Claude: '${instruction}'`);
-            speakAthena(`Revised draft for ${data.draft.recipient} is ready for review.`);
-            fetchCommsDrafts();
-            fetchLogs();
-        }
-    } catch (e) {
-        console.error("Error executing draft rework:", e);
-        addSimulatedSystemLog("System", `Failed to rework draft ${id}`);
-        speakAthena(`Failed to rework draft.`);
-    }
-}
-
-// 7. Telemetry & DevOps Dashboard
+// ── TELEMETRY & SYSTEM LOGS ────────────────────────────────────────────────────
 async function fetchTelemetryData() {
     try {
         const res = await fetch(`${apiBase}/api/devops/telemetry`);
         const data = await res.json();
         
-        document.getElementById("tel-supabase").textContent = data.supabase_connection;
-        document.getElementById("tel-latency").textContent = `${data.current_latency_ms}ms`;
-        document.getElementById("tel-behavioral").textContent = "STRIPPED";
+        const dbStatus = document.getElementById("tel-supabase");
+        const latencyVal = document.getElementById("tel-latency");
+        if (dbStatus) dbStatus.textContent = data.supabase_connection;
+        if (latencyVal) latencyVal.textContent = `${data.current_latency_ms}ms`;
         
         renderTelemetryChart(data.latency_history);
         
+        // Update connection icon active/inactive in env-config-panel
+        const gCheck = document.querySelector("#google-auth-btn .key-val i");
+        if (gCheck) {
+            if (data.gmail_gateway === "READY") {
+                gCheck.className = "fa-solid fa-check icon-green";
+            } else {
+                gCheck.className = "fa-solid fa-triangle-exclamation icon-yellow";
+            }
+        }
     } catch (e) {
-        console.error("Error fetching telemetry:", e);
+        console.error("Telemetry query failed:", e);
     }
 }
 
 function renderTelemetryChart(latencies) {
     const chart = document.getElementById("latency-chart");
+    if (!chart) return;
     chart.innerHTML = "";
     
     const maxVal = Math.max(...latencies, 20);
@@ -494,13 +577,13 @@ function renderTelemetryChart(latencies) {
     });
 }
 
-// 8. System Logs Console
 async function fetchLogs() {
     try {
         const res = await fetch(`${apiBase}/api/logs`);
         const logs = await res.json();
-        
         const consoleEl = document.getElementById("console-logs");
+        if (!consoleEl) return;
+        
         consoleEl.innerHTML = "";
         
         logs.forEach(log => {
@@ -515,7 +598,7 @@ async function fetchLogs() {
             }
             
             line.innerHTML = `
-                <span class="log-time">[${log.timestamp.split(' ')[1]}]</span>
+                <span class="log-time">[${log.timestamp.split(' ')[1] || log.timestamp}]</span>
                 <span class="log-source">[${log.source}]</span>
                 <span class="log-msg ${msgClass}">${escapeHtml(log.message)}</span>
             `;
@@ -525,12 +608,14 @@ async function fetchLogs() {
         
         consoleEl.scrollTop = consoleEl.scrollHeight;
     } catch (e) {
-        console.error("Error fetching logs:", e);
+        console.error("Logs error:", e);
     }
 }
 
 function addSimulatedSystemLog(source, msg) {
     const consoleEl = document.getElementById("console-logs");
+    if (!consoleEl) return;
+    
     const now = new Date();
     const timeStr = now.toTimeString().split(' ')[0];
     
@@ -554,7 +639,9 @@ function addSimulatedSystemLog(source, msg) {
     consoleEl.scrollTop = consoleEl.scrollHeight;
 }
 
+// ── UTILS ──────────────────────────────────────────────────────────────────────
 function escapeHtml(text) {
+    if (!text) return "";
     return text
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")

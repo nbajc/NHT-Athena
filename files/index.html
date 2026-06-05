@@ -460,7 +460,7 @@
                         <h3><i class="fa-solid fa-key"></i> Key Gateways Active</h3>
                         <div class="keys-grid">
                             <div class="key-item"><span class="key-name">Anthropic / Claude</span><span class="key-val"><i class="fa-solid fa-check icon-green"></i></span></div>
-                            <div class="key-item" id="google-auth-btn" style="cursor:pointer;" title="Click to authenticate Google Account"><span class="key-name">Gemini / Google</span><span class="key-val"><i class="fa-solid fa-check icon-green"></i></span></div>
+                            <div class="key-item"><span class="key-name">Gemini / Google</span><span class="key-val"><i class="fa-solid fa-check icon-green"></i></span></div>
                             <div class="key-item"><span class="key-name">Supabase</span><span class="key-val"><i class="fa-solid fa-check icon-green"></i></span></div>
                             <div class="key-item"><span class="key-name">Twilio WhatsApp</span><span class="key-val"><i class="fa-solid fa-check icon-green"></i></span></div>
                         </div>
@@ -496,5 +496,277 @@
     </div>
 
     <script src="/static/js/app.js"></script>
+
+    <script>
+    // ── DRAFT ENGINE — FIX 1, 2, 3 ────────────────────────────────────────────
+    let draftsData = {};
+
+    async function loadDrafts() {
+        try {
+            const res = await fetch('/api/comms/drafts');
+            const drafts = await res.json();
+            draftsData = {};
+            drafts.forEach(d => { draftsData[d.id] = d; });
+            renderDrafts();
+            renderApprovals();
+        } catch(e) { console.error('Drafts load failed', e); }
+    }
+
+    function renderDrafts() {
+        const container = document.getElementById('drafts-container');
+        const pending = Object.values(draftsData).filter(d => d.status === 'Pending Approval');
+        if (!pending.length) {
+            container.innerHTML = '<div class="loading-placeholder">No pending drafts.</div>';
+            return;
+        }
+        container.innerHTML = pending.map(d => buildDraftCard(d)).join('');
+    }
+
+    function buildDraftCard(d) {
+        return `
+        <div class="draft-card" id="draft-card-${d.id}">
+            <div class="draft-meta">
+                <span class="draft-recipient"><i class="fa-solid fa-user fa-xs"></i> ${d.recipient}</span>
+                <span class="draft-channel">${d.channel}</span>
+                <span class="draft-status pending" id="draft-status-${d.id}">PENDING APPROVAL</span>
+            </div>
+
+            <!-- FIX 1+2: resizable textarea, editable before approve -->
+            <textarea class="draft-textarea" id="draft-text-${d.id}" readonly>${d.payload}</textarea>
+
+            <div class="draft-actions">
+                <button class="btn-edit" onclick="editDraft('${d.id}')">
+                    <i class="fa-solid fa-pen"></i> EDIT
+                </button>
+                <button class="btn-save" id="save-btn-${d.id}" onclick="saveDraft('${d.id}')">
+                    <i class="fa-solid fa-floppy-disk"></i> SAVE
+                </button>
+                <button class="btn-approve" onclick="approveDraft('${d.id}')">
+                    <i class="fa-solid fa-check"></i> APPROVE & SEND
+                </button>
+                <button class="btn-reject" onclick="rejectDraft('${d.id}')">
+                    <i class="fa-solid fa-xmark"></i> REJECT
+                </button>
+            </div>
+
+            <!-- FIX 3: repeat-tomorrow prompt -->
+            <div class="repeat-prompt" id="repeat-prompt-${d.id}">
+                <span>Rejected. Schedule this draft for tomorrow?</span>
+                <button onclick="repeatTomorrow('${d.id}', true)">YES, TOMORROW</button>
+                <button onclick="repeatTomorrow('${d.id}', false)">NO, REMOVE</button>
+            </div>
+        </div>`;
+    }
+
+    // FIX 2: toggle edit mode
+    function editDraft(id) {
+        const ta = document.getElementById(`draft-text-${id}`);
+        const saveBtn = document.getElementById(`save-btn-${id}`);
+        ta.removeAttribute('readonly');
+        ta.focus();
+        saveBtn.style.display = 'inline-block';
+        addLog('Comms-Draft-Engine', `Draft for ${draftsData[id]?.recipient} opened for editing.`);
+    }
+
+    function saveDraft(id) {
+        const ta = document.getElementById(`draft-text-${id}`);
+        ta.setAttribute('readonly', true);
+        document.getElementById(`save-btn-${id}`).style.display = 'none';
+        if (draftsData[id]) draftsData[id].payload = ta.value;
+        addLog('Comms-Draft-Engine', `Draft for ${draftsData[id]?.recipient} saved with edits.`);
+    }
+
+    async function approveDraft(id) {
+        // Save any edits first
+        saveDraft(id);
+        try {
+            const res = await fetch('/api/comms/approve', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, payload: draftsData[id]?.payload })
+            });
+            const data = await res.json();
+            if (data.success) {
+                const card = document.getElementById(`draft-card-${id}`);
+                card.classList.add('executed');
+                document.getElementById(`draft-status-${id}`).className = 'draft-status executed';
+                document.getElementById(`draft-status-${id}`).textContent = 'EXECUTED / SENT';
+                // Remove action buttons
+                card.querySelector('.draft-actions').innerHTML =
+                    '<span style="font-size:0.75rem;color:#3cdc78"><i class="fa-solid fa-circle-check"></i> Transmitted</span>';
+                addLog('Athena-Core', `HUMAN-IN-THE-LOOP VALIDATED: Draft sent to ${draftsData[id]?.recipient}.`);
+                setTimeout(() => { card.style.display = 'none'; renderApprovals(); }, 2000);
+            }
+        } catch(e) { console.error('Approve failed', e); }
+    }
+
+    // FIX 3: reject → ask repeat
+    function rejectDraft(id) {
+        const card = document.getElementById(`draft-card-${id}`);
+        card.classList.add('rejected');
+        document.getElementById(`draft-status-${id}`).className = 'draft-status rejected';
+        document.getElementById(`draft-status-${id}`).textContent = 'REJECTED';
+        card.querySelector('.draft-actions').style.display = 'none';
+        document.getElementById(`repeat-prompt-${id}`).classList.add('visible');
+        addLog('Comms-Draft-Engine', `Draft for ${draftsData[id]?.recipient} rejected. Awaiting repeat decision.`);
+    }
+
+    function repeatTomorrow(id, repeat) {
+        const card = document.getElementById(`draft-card-${id}`);
+        if (repeat) {
+            addLog('Comms-Draft-Engine', `Draft for ${draftsData[id]?.recipient} scheduled to repeat tomorrow.`);
+            card.querySelector('.repeat-prompt').innerHTML =
+                '<span><i class="fa-solid fa-clock"></i> Scheduled for tomorrow\'s brief.</span>';
+            setTimeout(() => { card.style.display = 'none'; }, 2500);
+        } else {
+            addLog('Comms-Draft-Engine', `Draft for ${draftsData[id]?.recipient} removed from queue.`);
+            card.style.display = 'none';
+        }
+        delete draftsData[id];
+        renderApprovals();
+    }
+
+    function renderApprovals() {
+        const list = document.getElementById('approvals-list');
+        const pending = Object.values(draftsData).filter(d => d.status === 'Pending Approval');
+        if (!pending.length) {
+            list.innerHTML = '<div class="loading-placeholder">No pending approvals.</div>';
+            return;
+        }
+        list.innerHTML = pending.map(d => `
+            <div class="approval-item" style="padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:0.8rem;color:#aaa;">
+                <i class="fa-solid fa-envelope-open-text" style="color:#7aaaff;margin-right:6px;"></i>
+                <strong style="color:#ddd">${d.recipient}</strong>
+                <span style="color:#666;margin-left:6px;font-size:0.72rem">${d.channel}</span>
+            </div>`).join('');
+    }
+
+    // ── BRIEF + PRIORITIES — FIX 4 & 5 ───────────────────────────────────────
+    async function loadBrief() {
+        try {
+            const res = await fetch('/api/brief');
+            const data = await res.json();
+
+            // Brief text from Gemini
+            document.getElementById('brief-text').textContent =
+                data.gemini_brief || data.daily_brief_text || 'Brief unavailable.';
+
+            // Claude synthesis
+            if (data.athena_synthesis) {
+                document.getElementById('brief-synthesis-text').textContent = data.athena_synthesis;
+                document.getElementById('brief-synthesis').classList.add('visible');
+            }
+
+            // State blocks
+            if (data.states) {
+                const s = data.states;
+                if (s.target_block) {
+                    document.getElementById('target-title').textContent = s.target_block.title || '—';
+                    document.getElementById('target-time').textContent  = s.target_block.time  || '—';
+                    document.getElementById('target-status').textContent = s.target_block.status || '—';
+                }
+                if (s.anchor_block) {
+                    document.getElementById('anchor-title').textContent = s.anchor_block.title || '—';
+                    document.getElementById('anchor-time').textContent  = s.anchor_block.time  || '—';
+                    document.getElementById('anchor-status').textContent = s.anchor_block.status || '—';
+                }
+            }
+        } catch(e) { console.error('Brief load failed', e); }
+    }
+
+    // FIX 5: load coordinated priorities from Claude + Gemini
+    async function loadPriorities() {
+        try {
+            const res = await fetch('/api/priorities');
+            const data = await res.json();
+            const list = document.getElementById('priorities-list');
+            if (data.priorities && data.priorities.length) {
+                list.innerHTML = data.priorities.map((p, i) => `
+                    <div class="priority-item ${p.urgent ? 'priority-urgent' : ''}">
+                        <span class="priority-num">${i+1}.</span>
+                        <span>${p.text}</span>
+                        ${p.urgent ? '<i class="fa-solid fa-triangle-exclamation" style="color:#ff9060;margin-left:auto;flex-shrink:0"></i>' : ''}
+                    </div>`).join('');
+            } else {
+                list.innerHTML = '<div class="loading-placeholder">Priorities unavailable.</div>';
+            }
+        } catch(e) {
+            document.getElementById('priorities-list').innerHTML =
+                '<div class="loading-placeholder">Connect /api/priorities endpoint.</div>';
+        }
+    }
+
+    // FIX 4: send feedback to tomorrow's brief
+    async function submitFeedback() {
+        const input = document.getElementById('feedback-input');
+        const text = input.value.trim();
+        if (!text) return;
+        try {
+            await fetch('/api/brief/feedback', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ feedback: text })
+            });
+            input.value = '';
+            document.getElementById('feedback-sent').style.display = 'block';
+            addLog('Brief-Orchestrator', `Feedback logged for tomorrow: "${text.slice(0,60)}..."`);
+            setTimeout(() => { document.getElementById('feedback-sent').style.display = 'none'; }, 4000);
+        } catch(e) { console.error('Feedback failed', e); }
+    }
+
+    // ── DICTATION → CLAUDE ────────────────────────────────────────────────────
+    async function sendDictation(text) {
+        const box = document.getElementById('athena-response-box');
+        const responseText = document.getElementById('athena-response-text');
+        box.classList.add('visible');
+        responseText.textContent = 'Thinking...';
+        try {
+            const res = await fetch('/api/voice/dictate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text })
+            });
+            const data = await res.json();
+            responseText.textContent = data.response || 'No response.';
+            addLog('Athena-Core (Voice)', `Input: "${text.slice(0,50)}" → Claude responded.`);
+        } catch(e) {
+            responseText.textContent = 'Athena unavailable. Check backend.';
+        }
+    }
+
+    function applySuggestion(text) {
+        document.getElementById('dictation-input').value = text;
+        sendDictation(text);
+    }
+
+    function addLog(source, message) {
+        const console = document.getElementById('console-logs');
+        const ts = new Date().toLocaleTimeString();
+        const entry = document.createElement('div');
+        entry.className = 'log-entry';
+        entry.innerHTML = `<span class="log-ts">${ts}</span><span class="log-source">${source}</span><span class="log-msg">${message}</span>`;
+        console.prepend(entry);
+    }
+
+    // ── INIT ──────────────────────────────────────────────────────────────────
+    document.getElementById('send-dictation-btn').addEventListener('click', () => {
+        const text = document.getElementById('dictation-input').value.trim();
+        if (text) sendDictation(text);
+    });
+    document.getElementById('dictation-input').addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+            const text = e.target.value.trim();
+            if (text) sendDictation(text);
+        }
+    });
+
+    // Load everything on boot
+    loadBrief();
+    loadDrafts();
+    loadPriorities();
+
+    // Refresh priorities every 5 minutes
+    setInterval(loadPriorities, 5 * 60 * 1000);
+    </script>
 </body>
 </html>
