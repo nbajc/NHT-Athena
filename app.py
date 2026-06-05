@@ -268,6 +268,7 @@ def approve_draft():
     """Human-in-the-loop approval gate."""
     data = request.json or {}
     draft_id = data.get("id")
+    payload = data.get("payload")
 
     if not draft_id or draft_id not in comms_drafts:
         return jsonify({"success": False, "error": "Invalid Draft ID"}), 400
@@ -276,6 +277,10 @@ def approve_draft():
 
     if draft["status"] == "Executed / Sent":
         return jsonify({"success": False, "error": "Draft already executed"}), 400
+
+    # Save any manual inline modifications
+    if payload:
+        draft["payload"] = payload
 
     draft["status"] = "Executed / Sent"
 
@@ -290,6 +295,80 @@ def approve_draft():
         "message": f"Draft for {draft['recipient']} approved and executed.",
         "draft": draft
     })
+
+
+@app.route("/api/comms/reject", methods=["POST"])
+def reject_draft():
+    """Natasha rejects/dismisses a draft action."""
+    data = request.json or {}
+    draft_id = data.get("id")
+
+    if not draft_id or draft_id not in comms_drafts:
+        return jsonify({"success": False, "error": "Invalid Draft ID"}), 400
+
+    draft = comms_drafts[draft_id]
+
+    if draft["status"] == "Executed / Sent":
+        return jsonify({"success": False, "error": "Cannot reject an already executed draft"}), 400
+
+    draft["status"] = "Rejected"
+
+    system_logs.append({
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "source": "Athena-Core",
+        "message": f"HUMAN-IN-THE-LOOP REJECTED: Outbound draft to {draft['recipient']} was dismissed."
+    })
+
+    return jsonify({
+        "success": True,
+        "message": f"Draft for {draft['recipient']} has been rejected.",
+        "draft": draft
+    })
+
+
+@app.route("/api/comms/rework", methods=["POST"])
+def rework_draft():
+    """Natasha requests a rework of a draft from Athena."""
+    data = request.json or {}
+    draft_id = data.get("id")
+    instruction = data.get("instruction", "")
+
+    if not draft_id or draft_id not in comms_drafts:
+        return jsonify({"success": False, "error": "Invalid Draft ID"}), 400
+    if not instruction:
+        return jsonify({"success": False, "error": "Instruction required"}), 400
+
+    draft = comms_drafts[draft_id]
+
+    if draft["status"] == "Executed / Sent":
+        return jsonify({"success": False, "error": "Cannot rework an already executed draft"}), 400
+
+    # Call Claude to rewrite the message based on feedback
+    prompt = f"""
+    Rework this communication draft to {draft['recipient']} based on the following instruction: "{instruction}"
+    
+    ORIGINAL DRAFT:
+    {draft['payload']}
+    
+    Ensure you match Natasha's voice (intelligent, warm, direct, no corporate filler). Return only the revised message text. No introductory remarks.
+    """
+    revised_text = ask_claude(prompt)
+
+    draft["payload"] = revised_text
+    draft["status"] = "Pending Approval"  # Reset status
+
+    system_logs.append({
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "source": "Athena-Core",
+        "message": f"ATHENA REWORKED DRAFT: Updated draft to {draft['recipient']} based on instruction: '{instruction}'"
+    })
+
+    return jsonify({
+        "success": True,
+        "message": "Draft revised by Athena.",
+        "draft": draft
+    })
+
 
 
 @app.route("/api/voice/dictate", methods=["POST"])

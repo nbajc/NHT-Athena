@@ -132,8 +132,8 @@ function drawWave() {
     
     const waveCount = isRecording ? 4 : 2;
     const colors = isRecording 
-        ? ["rgba(255, 0, 85, 0.4)", "rgba(157, 78, 221, 0.3)", "rgba(0, 210, 255, 0.2)", "rgba(255, 158, 0, 0.15)"]
-        : ["rgba(0, 210, 255, 0.15)", "rgba(157, 78, 221, 0.1)"];
+        ? ["rgba(212, 0, 122, 0.4)", "rgba(255, 45, 138, 0.3)", "rgba(71, 200, 255, 0.2)", "rgba(232, 160, 32, 0.15)"]
+        : ["rgba(212, 0, 122, 0.15)", "rgba(71, 200, 255, 0.1)"];
     
     for (let i = 0; i < waveCount; i++) {
         ctx.beginPath();
@@ -236,7 +236,10 @@ async function fetchBriefData() {
         const res = await fetch(`${apiBase}/api/brief`);
         const data = await res.json();
         
-        document.getElementById("brief-text").textContent = data.daily_brief_text;
+        // Render brief text synthesized by Claude
+        document.getElementById("brief-text").innerHTML = data.athena_synthesis 
+            ? escapeHtml(data.athena_synthesis).replace(/\n/g, '<br>')
+            : escapeHtml(data.gemini_brief).replace(/\n/g, '<br>');
         
         updateTimelineItem("state-routine", data.states.routine_block);
         updateTimelineItem("state-target", data.states.target_block);
@@ -259,9 +262,9 @@ function updateTimelineItem(id, block) {
     indicator.textContent = block.status;
     
     indicator.className = "status-indicator";
-    if (block.status.includes("Completed") || block.status.includes("Active")) {
+    if (block.status.includes("Completed") || block.status.includes("Active") || block.status.includes("commitment")) {
         indicator.classList.add("success");
-    } else if (block.status.includes("Progress")) {
+    } else if (block.status.includes("Progress") || block.status.includes("drafted")) {
         indicator.classList.add("warning");
     } else {
         indicator.classList.add("info");
@@ -290,7 +293,13 @@ function renderDrafts(drafts) {
         card.className = "draft-card";
         
         const isPending = draft.status === "Pending Approval";
-        const statusClass = isPending ? "pending" : "sent";
+        
+        let statusClass = "pending";
+        if (draft.status === "Executed / Sent") {
+            statusClass = "sent";
+        } else if (draft.status === "Rejected") {
+            statusClass = "rejected";
+        }
         
         card.innerHTML = `
             <div class="draft-card-header">
@@ -301,19 +310,34 @@ function renderDrafts(drafts) {
                 <span class="draft-status ${statusClass}">${draft.status}</span>
             </div>
             
-            <div class="draft-payload">${escapeHtml(draft.payload)}</div>
+            <textarea class="draft-textarea" id="textarea-${draft.id}" ${isPending ? "" : "disabled"} placeholder="Draft content...">${escapeHtml(draft.payload)}</textarea>
             
-            <div class="draft-integration">
-                <i class="fa-solid fa-code-merge"></i> Context: ${draft.integration}
+            ${isPending ? `
+            <div class="rework-input-group">
+                <input type="text" class="rework-input" id="rework-input-${draft.id}" placeholder="Athena rework instructions..." autocomplete="off">
+                <button class="rework-btn" onclick="reworkDraft('${draft.id}')">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Rework
+                </button>
             </div>
-            
+            ` : ""}
+
             <div class="draft-action-bar">
                 <span class="broadcast-badge"><i class="fa-solid fa-tower-broadcast"></i> ${draft.broadcast_type}</span>
-                <button class="approve-full-btn" 
-                        onclick="approveDraft('${draft.id}')" 
-                        ${isPending ? "" : "disabled"}>
-                    ${isPending ? '<i class="fa-solid fa-circle-check"></i> Approve Broadcast' : '<i class="fa-solid fa-check-double"></i> Executed'}
+                
+                ${isPending ? `
+                <div class="btn-group">
+                    <button class="reject-btn" onclick="rejectDraft('${draft.id}')">
+                        <i class="fa-solid fa-ban"></i> Reject
+                    </button>
+                    <button class="approve-full-btn" onclick="approveDraft('${draft.id}')">
+                        <i class="fa-solid fa-circle-check"></i> Approve & Send
+                    </button>
+                </div>
+                ` : `
+                <button class="approve-full-btn" disabled>
+                    <i class="fa-solid fa-check-double"></i> ${draft.status}
                 </button>
+                `}
             </div>
         `;
         
@@ -329,7 +353,7 @@ function renderApprovalsQueue(drafts) {
     
     if (pendingDrafts.length === 0) {
         list.innerHTML = `
-            <div class="approval-item" style="justify-content: center; border-color: rgba(0, 245, 212, 0.1); background: rgba(0, 245, 212, 0.02)">
+            <div class="approval-item" style="justify-content: center; border-color: rgba(71, 200, 255, 0.1); background: rgba(71, 200, 255, 0.02)">
                 <span class="approval-desc" style="color: var(--color-success)">
                     <i class="fa-solid fa-circle-check"></i> Sovereignty Clear: No pending broadcasts
                 </span>
@@ -345,7 +369,7 @@ function renderApprovalsQueue(drafts) {
         item.innerHTML = `
             <div class="approval-info">
                 <span class="approval-target">${draft.channel} (${draft.recipient})</span>
-                <span class="approval-desc">Awaiting Human-in-the-Loop broadcast approval</span>
+                <span class="approval-desc">Awaiting human validation</span>
             </div>
             <button class="approve-mini-btn" onclick="approveDraft('${draft.id}')">
                 <i class="fa-solid fa-paper-plane"></i> Send
@@ -357,8 +381,31 @@ function renderApprovalsQueue(drafts) {
 }
 
 async function approveDraft(id) {
+    const textarea = document.getElementById(`textarea-${id}`);
+    const currentPayload = textarea ? textarea.value : null;
+
     try {
         const res = await fetch(`${apiBase}/api/comms/approve`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: id, payload: currentPayload })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+            addSimulatedSystemLog("Athena-Core (Sovereignty)", `BROADCAST SUCCESS: Approved and sent draft for ${id.toUpperCase()}`);
+            speakAthena(`Outbound draft for ${data.draft.recipient} successfully approved and broadcasted.`);
+            fetchCommsDrafts();
+            fetchLogs();
+        }
+    } catch (e) {
+        console.error("Error executing draft approval:", e);
+    }
+}
+
+async function rejectDraft(id) {
+    try {
+        const res = await fetch(`${apiBase}/api/comms/reject`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ id: id })
@@ -366,13 +413,45 @@ async function approveDraft(id) {
         const data = await res.json();
         
         if (data.success) {
-            addSimulatedSystemLog("Athena-Core (Sovereignty)", `BROADCAST SUCCESS: Approved draft dispatch for ${id.toUpperCase()}`);
-            speakAthena(`Outbound ${id} dispatch broadcast successfully executed.`);
+            addSimulatedSystemLog("Athena-Core (Sovereignty)", `DISMISSED: Outbound draft for ${id.toUpperCase()} rejected.`);
+            speakAthena(`Draft for ${data.draft.recipient} has been rejected.`);
             fetchCommsDrafts();
             fetchLogs();
         }
     } catch (e) {
-        console.error("Error executing draft approval:", e);
+        console.error("Error executing draft rejection:", e);
+    }
+}
+
+async function reworkDraft(id) {
+    const input = document.getElementById(`rework-input-${id}`);
+    const instruction = input ? input.value.trim() : "";
+    
+    if (!instruction) return;
+    
+    addSimulatedSystemLog("User (Rework Feedback)", `Requested Athena to revise draft ${id}: "${instruction}"`);
+    speakAthena(`Revising the draft for ${id}. Please hold.`);
+    
+    if (input) input.disabled = true;
+    
+    try {
+        const res = await fetch(`${apiBase}/api/comms/rework`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: id, instruction: instruction })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+            addSimulatedSystemLog("Athena-Core", `Draft revised by Claude: '${instruction}'`);
+            speakAthena(`Revised draft for ${data.draft.recipient} is ready for review.`);
+            fetchCommsDrafts();
+            fetchLogs();
+        }
+    } catch (e) {
+        console.error("Error executing draft rework:", e);
+        addSimulatedSystemLog("System", `Failed to rework draft ${id}`);
+        speakAthena(`Failed to rework draft.`);
     }
 }
 
@@ -428,6 +507,8 @@ async function fetchLogs() {
             let msgClass = "";
             if (log.message.includes("HUMAN-IN-THE-LOOP") || log.message.includes("BROADCAST")) {
                 msgClass = "highlight-validated";
+            } else if (log.message.includes("REJECTED") || log.message.includes("DISMISSED")) {
+                msgClass = "highlight-rejected";
             }
             
             line.innerHTML = `
@@ -454,8 +535,10 @@ function addSimulatedSystemLog(source, msg) {
     line.className = "log-line";
     
     let msgClass = "";
-    if (msg.includes("HUMAN-IN-THE-LOOP") || msg.includes("Transcribed") || msg.includes("DISPATCH")) {
+    if (msg.includes("HUMAN-IN-THE-LOOP") || msg.includes("Transcribed") || msg.includes("SUCCESS")) {
         msgClass = "highlight-validated";
+    } else if (msg.includes("REJECTED") || msg.includes("DISMISSED")) {
+        msgClass = "highlight-rejected";
     }
     
     line.innerHTML = `
