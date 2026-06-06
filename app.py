@@ -29,8 +29,10 @@ CORS(app, origins=[
 
 # ── API Clients ────────────────────────────────────────────────────────────────
 anthropic_client = None
-anthropic_key = os.getenv("ANTHROPIC_API_KEY")
+anthropic_key = os.getenv("ANTHROPIC_API_KEY") or os.getenv("anthropic_api_key")
 if anthropic_key:
+    # Remove surrounding quotes if present (sometimes happens with raw environment input)
+    anthropic_key = anthropic_key.strip('"\'')
     try:
         anthropic_client = anthropic.Anthropic(api_key=anthropic_key)
     except Exception as e:
@@ -39,8 +41,9 @@ else:
     print("[WARNING] ANTHROPIC_API_KEY is missing from environment. Claude integration will be disabled.")
 
 gemini_model = None
-google_key = os.getenv("GOOGLE_API_KEY")
+google_key = os.getenv("GOOGLE_API_KEY") or os.getenv("google_api_key")
 if google_key:
+    google_key = google_key.strip('"\'')
     try:
         genai.configure(api_key=google_key)
         gemini_model = genai.GenerativeModel("gemini-1.5-flash")
@@ -50,11 +53,13 @@ else:
     print("[WARNING] GOOGLE_API_KEY is missing from environment. Gemini integration will be disabled.")
 
 # Initialize Supabase client
-supabase_url = os.getenv("SUPABASE_URL")
-supabase_key = os.getenv("SUPABASE_KEY") or os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+supabase_url = os.getenv("SUPABASE_URL") or os.getenv("supabase_url")
+supabase_key = os.getenv("SUPABASE_KEY") or os.getenv("supabase_key") or os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("supabase_service_role_key")
 supabase: Client = None
 
 if supabase_url and supabase_key:
+    supabase_url = supabase_url.strip('"\'')
+    supabase_key = supabase_key.strip('"\'')
     try:
         # Normalize trailing slash in REST URL if present
         normalized_url = supabase_url
@@ -78,20 +83,24 @@ SCOPES = [
 
 # Helper to load Google Client Config
 def get_google_client_config():
-    env_creds = os.getenv("GOOGLE_CREDENTIALS_JSON")
+    env_creds = os.getenv("GOOGLE_CREDENTIALS_JSON") or os.getenv("google_credentials_json")
     if env_creds:
+        # Strip outer quotes if present
+        env_creds = env_creds.strip('"\'')
         try:
             return json.loads(env_creds)
         except Exception as e:
             print(f"Error parsing GOOGLE_CREDENTIALS_JSON: {e}")
             
-    secret_path = os.getenv("GOOGLE_CLIENT_SECRET_FILE")
-    if secret_path and os.path.exists(secret_path):
-        try:
-            with open(secret_path, 'r') as f:
-                return json.load(f)
-        except Exception as e:
-            print(f"Error reading GOOGLE_CLIENT_SECRET_FILE: {e}")
+    secret_path = os.getenv("GOOGLE_CLIENT_SECRET_FILE") or os.getenv("google_client_secret_file")
+    if secret_path:
+        secret_path = secret_path.strip('"\'')
+        if os.path.exists(secret_path):
+            try:
+                with open(secret_path, 'r') as f:
+                    return json.load(f)
+            except Exception as e:
+                print(f"Error reading GOOGLE_CLIENT_SECRET_FILE: {e}")
     return None
 
 # Helper to load stored Google Credentials from Supabase
