@@ -1,5 +1,8 @@
 // ── STATE VARIABLES ───────────────────────────────────────────────────────────
 let apiBase = window.location.origin;
+if (window.location.hostname === "athena.nexushestia.com") {
+    apiBase = "https://api.athena.nexushestia.com";
+}
 let isRecording = false;
 let canvas, ctx, animationFrameId;
 let mockDictationPhrases = [
