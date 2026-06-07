@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NHT Athena - Sovereignty Executive Console</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/styles.css?v=2.2.1">
+
+    <style>
+        /* ── DRAFT CARD UPGRADES ─────────────────────────────── */
+        .draft-card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.09);
+            border-radius: 8px;
+            padding: 14px;
+            margin-bottom: 12px;
+            transition: border-color 0.2s;
+        }
+        .draft-card:hover { border-color: rgba(255,255,255,0.18); }
+
+        .draft-card.rejected  { opacity: 0.45; border-color: rgba(255,80,80,0.3); }
+        .draft-card.executed  { opacity: 0.55; border-color: rgba(80,255,150,0.3); }
+
+        .draft-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .draft-recipient { font-family: 'Space Mono', monospace; font-size: 0.78rem; color: #a0cfff; }
+        .draft-channel   { font-size: 0.72rem; color: #888; }
+        .draft-status    { font-size: 0.72rem; padding: 2px 8px; border-radius: 10px; }
+        .draft-status.pending  { background: rgba(255,200,60,0.15); color: #ffc83c; }
+        .draft-status.executed { background: rgba(60,220,120,0.15); color: #3cdc78; }
+        .draft-status.rejected { background: rgba(255,80,80,0.15);  color: #ff5050; }
+
+        /* Resizable textarea — FIX 1 & 2 */
+        .draft-textarea {
+            width: 100%;
+            min-height: 90px;
+            max-height: 320px;
+            resize: vertical;            /* user can drag to resize */
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 6px;
+            color: #e0e0e0;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.82rem;
+            line-height: 1.5;
+            padding: 10px 12px;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+        .draft-textarea:focus {
+            outline: none;
+            border-color: rgba(120,180,255,0.4);
+        }
+        .draft-textarea[readonly] { cursor: default; opacity: 0.85; }
+
+        .draft-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        .btn-edit     { background: rgba(100,150,255,0.15); color: #7aaaff; border: 1px solid rgba(100,150,255,0.3); }
+        .btn-save     { background: rgba(100,200,255,0.15); color: #64d0ff; border: 1px solid rgba(100,200,255,0.3); display:none; }
+        .btn-approve  { background: rgba(60,220,120,0.15);  color: #3cdc78; border: 1px solid rgba(60,220,120,0.3); }
+        .btn-reject   { background: rgba(255,80,80,0.12);   color: #ff6060; border: 1px solid rgba(255,80,80,0.25); }
+        .btn-remove   { background: rgba(255,80,80,0.08);   color: #ff4040; border: 1px solid rgba(255,80,80,0.2);  }
+
+        .draft-actions button {
+            padding: 5px 12px;
+            border-radius: 5px;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.72rem;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .draft-actions button:hover { filter: brightness(1.3); transform: translateY(-1px); }
+
+        /* Repeat-tomorrow prompt — FIX 3 */
+        .repeat-prompt {
+            display: none;
+            margin-top: 10px;
+            padding: 10px 12px;
+            background: rgba(255,160,60,0.08);
+            border: 1px solid rgba(255,160,60,0.25);
+            border-radius: 6px;
+            font-size: 0.8rem;
+            color: #ffb860;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .repeat-prompt.visible { display: flex; }
+        .repeat-prompt button  {
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.72rem;
+            font-family: 'Space Mono', monospace;
+            cursor: pointer;
+            border: 1px solid currentColor;
+            background: transparent;
+            color: inherit;
+            transition: all 0.15s;
+        }
+        .repeat-prompt button:hover { filter: brightness(1.3); }
+
+        /* Priorities panel — FIX 5 */
+        .priorities-panel {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(120,180,255,0.15);
+            border-radius: 8px;
+            padding: 14px;
+            margin-top: 14px;
+        }
+        .priorities-panel h3 {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.78rem;
+            color: #7aaaff;
+            margin: 0 0 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .priority-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            font-size: 0.82rem;
+            color: #ccc;
+            line-height: 1.4;
+        }
+        .priority-item:last-child { border-bottom: none; }
+        .priority-num {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.7rem;
+            color: #555;
+            min-width: 20px;
+            padding-top: 2px;
+        }
+        .priority-urgent { color: #ff9060; }
+        .priority-urgent .priority-num { color: #ff6030; }
+
+        /* Feedback loop — FIX 4 */
+        .feedback-module {
+            margin-top: 14px;
+            padding: 12px 14px;
+            background: rgba(100,200,150,0.05);
+            border: 1px solid rgba(100,200,150,0.15);
+            border-radius: 8px;
+        }
+        .feedback-module h3 {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.75rem;
+            color: #64c896;
+            margin: 0 0 8px 0;
+        }
+        .feedback-input-row {
+            display: flex;
+            gap: 8px;
+        }
+        .feedback-input {
+            flex: 1;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 6px;
+            color: #e0e0e0;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.82rem;
+            padding: 8px 12px;
+        }
+        .feedback-input:focus { outline: none; border-color: rgba(100,200,150,0.4); }
+        .btn-feedback {
+            background: rgba(100,200,150,0.15);
+            color: #64c896;
+            border: 1px solid rgba(100,200,150,0.3);
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.72rem;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.15s;
+        }
+        .btn-feedback:hover { filter: brightness(1.3); }
+        .feedback-sent {
+            font-size: 0.78rem;
+            color: #64c896;
+            margin-top: 6px;
+            display: none;
+        }
+
+        /* Athena response box */
+        .athena-response-box {
+            margin-top: 12px;
+            padding: 12px;
+            background: rgba(120,100,200,0.07);
+            border: 1px solid rgba(120,100,200,0.2);
+            border-radius: 8px;
+            font-size: 0.83rem;
+            color: #c8b8ff;
+            line-height: 1.6;
+            display: none;
+            white-space: pre-wrap;
+        }
+        .athena-response-box.visible { display: block; }
+        .athena-response-label {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.68rem;
+            color: #9888cc;
+            margin-bottom: 6px;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <!-- LOCK SCREEN OVERLAY -->
+    <div id="athena-lock-screen" class="lock-screen-overlay">
+        <div class="lock-screen-card">
+            <img src="/static/intricateNHT.png" alt="Nexus Hestia Technologies Logo" class="lock-screen-logo">
+            <h2 class="lock-screen-title">Athena Console Locked</h2>
+            <p class="lock-screen-subtitle">Sovereignty Access Authentication Required</p>
+            <div class="lock-input-group">
+                <input type="password" id="lock-passcode-input" placeholder="Enter secure passcode..." autocomplete="off">
+                <button id="lock-submit-btn" onclick="submitPasscode()">Access</button>
+            </div>
+            <div class="lock-error-msg" id="lock-error-msg"></div>
+        </div>
+    </div>
+
+    <div class="glass-bg-glow"></div>
+
+    <div class="app-container">
+        <!-- HEADER -->
+        <header class="app-header">
+            <div class="brand">
+                <img src="/static/intricateNHT.png" alt="Nexus Hestia Technologies Logo" class="brand-logo">
+                <div class="brand-text">
+                    <h1>ATHENA</h1>
+                    <span class="version-tag">v2.2</span>
+                </div>
+            </div>
+            <div class="sovereignty-badge">
+                <i class="fa-solid fa-shield-halved"></i>
+                <span>SOVEREIGNTY GUARDRAIL: ACTIVE</span>
+            </div>
+            <div class="time-widget" id="time-widget">
+                <div class="time-item">
+                    <span class="label">LOCAL</span>
+                    <span class="value" id="local-time">00:00:00</span>
+                </div>
+                <div class="time-item border-left">
+                    <span class="label">BELGRADE</span>
+                    <span class="value" id="belgrade-time">00:00:00</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- MAIN 4-GRID LAYOUT -->
+        <main class="dashboard-grid">
+
+            <!-- COLUMN 1: ATHENA CORE -->
+            <section class="card athena-core-card">
+                <div class="card-header">
+                    <div class="icon-title">
+                        <i class="fa-solid fa-microphone-lines icon-purple"></i>
+                        <h2>Athena-Core Interface</h2>
+                    </div>
+                    <span class="badge purple">Sovereignty Executive</span>
+                </div>
+                <div class="card-body">
+                    <div class="voice-module">
+                        <p class="section-desc">Mobile dictation optimization & voice-first entry</p>
+                        <div class="wave-container">
+                            <canvas id="waveform-canvas"></canvas>
+                            <button class="mic-btn" id="mic-btn" title="Simulate Voice Input">
+                                <i class="fa-solid fa-microphone"></i>
+                            </button>
+                        </div>
+                        <div class="dictation-input-group">
+                            <input type="text" id="dictation-input" placeholder="Ask Athena anything..." autocomplete="off">
+                            <button class="send-btn" id="send-dictation-btn">
+                                <i class="fa-solid fa-paper-plane"></i>
+                            </button>
+                        </div>
+                        <div class="suggestions">
+                            <span class="suggest-chip" onclick="applySuggestion('What should I focus on today?')">"Today's priorities"</span>
+                            <span class="suggest-chip" onclick="applySuggestion('Status of seed round with Pedja')">"Seed round status"</span>
+                            <span class="suggest-chip" onclick="applySuggestion('ARC show deadline status')">"ARC deadline"</span>
+                        </div>
+
+                        <!-- Athena Response Box -->
+                        <div class="athena-response-box" id="athena-response-box">
+                            <span class="athena-response-label">ATHENA / CLAUDE</span>
+                            <span id="athena-response-text"></span>
+                        </div>
+                    </div>
+
+                    <div class="pending-approvals-module">
+                        <h3><i class="fa-solid fa-user-check"></i> Pending Broadcast Approvals</h3>
+                        <div id="approvals-list" class="approvals-list">
+                            <div class="loading-placeholder">Loading pending items...</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- COLUMN 2: BRIEF-ORCHESTRATOR -->
+            <section class="card brief-orchestrator-card">
+                <div class="card-header">
+                    <div class="icon-title">
+                        <i class="fa-solid fa-calendar-day icon-blue"></i>
+                        <h2>Brief-Orchestrator</h2>
+                    </div>
+                    <span class="badge blue">State Engine</span>
+                </div>
+                <div class="card-body">
+                    <div class="brief-summary-box">
+                        <h3>Daily Briefing Synopsis</h3>
+                        <p id="brief-text">Loading latest daily brief from Gemini + Claude...</p>
+                        <!-- Athena synthesis -->
+                        <div id="brief-synthesis" class="athena-response-box" style="margin-top:10px;">
+                            <span class="athena-response-label">ATHENA SYNTHESIS / CLAUDE</span>
+                            <span id="brief-synthesis-text"></span>
+                        </div>
+                    </div>
+
+                    <!-- FIX 5: Today's Priorities from Claude+Gemini -->
+                    <div class="priorities-panel" id="priorities-panel">
+                        <h3><i class="fa-solid fa-bullseye"></i> Today's Priorities — Athena</h3>
+                        <div id="priorities-list">
+                            <div class="loading-placeholder">Coordinating with Gemini + Claude...</div>
+                        </div>
+                    </div>
+
+                    <!-- FIX 4: Feedback loop for tomorrow's brief -->
+                    <div class="feedback-module">
+                        <h3><i class="fa-solid fa-rotate-right"></i> Brief Feedback → Tomorrow</h3>
+                        <div class="feedback-input-row">
+                            <input type="text" class="feedback-input" id="feedback-input"
+                                placeholder="Tell Athena what was missed or wrong today...">
+                            <button class="btn-feedback" onclick="submitFeedback()">SEND</button>
+                        </div>
+                        <div class="feedback-sent" id="feedback-sent">
+                            <i class="fa-solid fa-check"></i> Feedback logged — Gemini + Claude will incorporate tomorrow.
+                        </div>
+                    </div>
+
+                    <div class="timeline-module">
+                        <h3><i class="fa-solid fa-clock-rotate-left"></i> Persistent State Blocks</h3>
+                        <div class="timeline">
+                            <div class="timeline-item active" id="state-routine">
+                                <div class="timeline-badge routine"><i class="fa-solid fa-book-open"></i></div>
+                                <div class="timeline-content">
+                                    <div class="time-header">
+                                        <h4>Routine Block</h4>
+                                        <span class="time-pill">07:00 - 09:00 AM</span>
+                                    </div>
+                                    <p class="title" id="routine-title">Denis + Mama Exam Prep</p>
+                                    <span class="status-indicator success">Active Daily Loop</span>
+                                </div>
+                            </div>
+                            <div class="timeline-item" id="state-target">
+                                <div class="timeline-badge target"><i class="fa-solid fa-graduation-cap"></i></div>
+                                <div class="timeline-content">
+                                    <div class="time-header">
+                                        <h4>Target Block</h4>
+                                        <span class="time-pill" id="target-time">—</span>
+                                    </div>
+                                    <p class="title" id="target-title">—</p>
+                                    <span class="status-indicator warning" id="target-status">In Progress</span>
+                                </div>
+                            </div>
+                            <div class="timeline-item" id="state-anchor">
+                                <div class="timeline-badge anchor"><i class="fa-solid fa-seedling"></i></div>
+                                <div class="timeline-content">
+                                    <div class="time-header">
+                                        <h4>Anchor Block</h4>
+                                        <span class="time-pill" id="anchor-time">—</span>
+                                    </div>
+                                    <p class="title" id="anchor-title">—</p>
+                                    <span class="status-indicator info" id="anchor-status">Scheduled</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- COLUMN 3: COMMS-DRAFT-ENGINE (FIX 1, 2, 3) -->
+            <section class="card comms-draft-card">
+                <div class="card-header">
+                    <div class="icon-title">
+                        <i class="fa-solid fa-paperclip icon-teal"></i>
+                        <h2>Comms-Draft-Engine</h2>
+                    </div>
+                    <span class="badge teal">Headless Loop</span>
+                </div>
+                <div class="card-body">
+                    <div class="section-info">
+                        <p>Edit drafts freely before approval. Rejected drafts ask if they should repeat tomorrow — otherwise removed.</p>
+                    </div>
+                    <div class="drafts-container" id="drafts-container">
+                        <div class="loading-placeholder">Loading drafts...</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- COLUMN 4: DEPLOYMENT-DEVOPS -->
+            <section class="card devops-card">
+                <div class="card-header">
+                    <div class="icon-title">
+                        <i class="fa-solid fa-server icon-amber"></i>
+                        <h2>Deployment-DevOps</h2>
+                    </div>
+                    <span class="badge amber">Pipeline & Infra</span>
+                </div>
+                <div class="card-body">
+                    <div class="telemetry-summary">
+                        <div class="tel-box">
+                            <span class="tel-label">SUPABASE</span>
+                            <span class="tel-value success-text" id="tel-supabase">CONNECTED</span>
+                        </div>
+                        <div class="tel-box">
+                            <span class="tel-label">LATENCY</span>
+                            <span class="tel-value" id="tel-latency">12ms</span>
+                        </div>
+                        <div class="tel-box">
+                            <span class="tel-label">BEHAVIORAL TEL</span>
+                            <span class="tel-value danger-text" id="tel-behavioral">STRIPPED</span>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <div class="chart-header">
+                            <h3>Connection Latency History (ms)</h3>
+                            <span class="chart-status"><i class="fa-solid fa-circle-nodes"></i> Zero Tracking Telemetry Asserted</span>
+                        </div>
+                        <div class="simulated-chart" id="latency-chart">
+                            <div class="chart-bar" style="height:48%"><span>12ms</span></div>
+                            <div class="chart-bar" style="height:56%"><span>14ms</span></div>
+                            <div class="chart-bar" style="height:44%"><span>11ms</span></div>
+                            <div class="chart-bar" style="height:60%"><span>15ms</span></div>
+                            <div class="chart-bar" style="height:48%"><span>12ms</span></div>
+                            <div class="chart-bar" style="height:52%"><span>13ms</span></div>
+                            <div class="chart-bar active" style="height:48%"><span>12ms</span></div>
+                        </div>
+                    </div>
+                    <div class="devops-git-workspace">
+                        <h3><i class="fa-solid fa-code-branch"></i> Repository Staging Build</h3>
+                        <div class="workspace-list">
+                            <div class="workspace-item">
+                                <span class="repo-name">NHT-Athena</span>
+                                <span class="repo-status success-text"><i class="fa-solid fa-circle-check"></i> v2.2 Live</span>
+                            </div>
+                            <div class="workspace-item">
+                                <span class="repo-name">technosomatic-arc-athena</span>
+                                <span class="repo-status success-text"><i class="fa-solid fa-circle-check"></i> Built</span>
+                            </div>
+                            <div class="workspace-item">
+                                <span class="repo-name">Technosomatic-Rendered</span>
+                                <span class="repo-status success-text"><i class="fa-solid fa-circle-check"></i> Built</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="env-config-panel">
+                        <h3><i class="fa-solid fa-key"></i> Key Gateways Active</h3>
+                        <div class="keys-grid">
+                            <div class="key-item"><span class="key-name">Anthropic / Claude</span><span class="key-val"><i class="fa-solid fa-check icon-green"></i></span></div>
+                            <div class="key-item" id="google-auth-btn" style="cursor:pointer;" title="Click to authenticate Google Account"><span class="key-name">Gemini / Google</span><span class="key-val"><i class="fa-solid fa-check icon-green"></i></span></div>
+                            <div class="key-item"><span class="key-name">Supabase</span><span class="key-val"><i class="fa-solid fa-check icon-green"></i></span></div>
+                            <div class="key-item"><span class="key-name">Twilio WhatsApp</span><span class="key-val"><i class="fa-solid fa-check icon-green"></i></span></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- SYSTEM LOGS -->
+        <footer class="app-footer">
+            <div class="console-header">
+                <div class="console-title">
+                    <i class="fa-solid fa-terminal"></i>
+                    <h2>Athena sovereignty logs & audit trail</h2>
+                </div>
+                <div class="console-actions">
+                    <span class="telemetry-guardrail"><i class="fa-solid fa-shield"></i> ZERO Telemetry Tracking Asserted</span>
+                </div>
+            </div>
+            <div class="console-body" id="console-logs"></div>
+        </footer>
+
+        <div class="footer-branding">
+            <div class="footer-branding-left">
+                <img src="/static/reducedNHT.png" alt="NHT Reduced Logo" class="footer-logo">
+                <span class="footer-copyright">&copy; 2026 NEXUS HESTIA TECHNOLOGIES. ALL RIGHTS RESERVED.</span>
+            </div>
+            <div class="footer-branding-right">
+                <span class="footer-status"><i class="fa-solid fa-circle success-text"></i> CORE SITES ACTIVE</span>
+                <span class="footer-link"><a href="https://nexushestia.com" target="_blank">NEXUSHESTIA.COM</a></span>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js?v=2.2.1"></script>
+</body>
+</html>
