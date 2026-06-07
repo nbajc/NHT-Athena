@@ -1,7 +1,9 @@
 // ── STATE VARIABLES ───────────────────────────────────────────────────────────
-let apiBase = window.location.origin;
-if (window.location.hostname === "athena.nexushestia.com") {
-    apiBase = "https://api.athena.nexushestia.com";
+let apiBase = "https://api.athena.nexushestia.com"; // Defaults to Railway backend
+// Support overriding to local backend using ?local=true query parameter
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get('local') === 'true') {
+    apiBase = window.location.origin;
 }
 let isRecording = false;
 let canvas, ctx, animationFrameId;
@@ -17,10 +19,10 @@ let athenaVoice = null;
 let draftsData = {};
 
 // ── DOM LOAD INITIALIZATION ───────────────────────────────────────────────────
-document.addEventListener("DOMContentLoaded", () => {
-    initTimeClocks();
-    initWaveformCanvas();
-    initAthenaVoice();
+let dashboardStarted = false;
+function startDashboard() {
+    if (dashboardStarted) return;
+    dashboardStarted = true;
     
     // Core loads
     loadBrief();
@@ -30,11 +32,19 @@ document.addEventListener("DOMContentLoaded", () => {
     fetchLogs();
     
     // Polling schedules
-    setInterval(initTimeClocks, 1000);
     setInterval(fetchTelemetryData, 4000);
     setInterval(loadDrafts, 5000);
     setInterval(fetchLogs, 5000);
     setInterval(loadPriorities, 5 * 60 * 1000); // 5 min
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    initTimeClocks();
+    initWaveformCanvas();
+    initAthenaVoice();
+    
+    // Polling schedules (Non-authenticated)
+    setInterval(initTimeClocks, 1000);
     
     // Event listeners
     document.getElementById("mic-btn").addEventListener("click", toggleVoiceRecording);
@@ -50,7 +60,133 @@ document.addEventListener("DOMContentLoaded", () => {
         googleAuthBtn.style.cursor = "pointer";
         googleAuthBtn.title = "Click to authenticate Google Account (Calendar & Gmail)";
     }
+    
+    // Wire lock screen Enter key press
+    const lockInput = document.getElementById("lock-passcode-input");
+    if (lockInput) {
+        lockInput.addEventListener("keypress", (e) => {
+            if (e.key === 'Enter') submitPasscode();
+        });
+    }
+    
+    // Authenticate / Check passcode
+    const passcode = localStorage.getItem("athena_passcode");
+    if (passcode) {
+        verifyPasscodeSilent(passcode);
+    } else {
+        showLockScreen();
+    }
 });
+
+// ── AUTHENTICATION & LOCK SCREEN ─────────────────────────────────────────────
+async function athenaFetch(url, options = {}) {
+    const passcode = localStorage.getItem("athena_passcode");
+    options.headers = options.headers || {};
+    if (passcode) {
+        options.headers["Authorization"] = `Bearer ${passcode}`;
+        options.headers["X-Athena-Token"] = passcode;
+    }
+    
+    try {
+        const res = await fetch(url, options);
+        if (res.status === 401) {
+            showLockScreen();
+            throw new Error("Unauthorized");
+        }
+        return res;
+    } catch (err) {
+        if (err.message === "Unauthorized") {
+            throw err;
+        }
+        throw err;
+    }
+}
+
+function showLockScreen() {
+    const overlay = document.getElementById("athena-lock-screen");
+    if (overlay) {
+        overlay.classList.add("visible");
+    }
+    const input = document.getElementById("lock-passcode-input");
+    if (input) {
+        input.focus();
+        input.value = "";
+    }
+}
+
+function hideLockScreen() {
+    const overlay = document.getElementById("athena-lock-screen");
+    if (overlay) {
+        overlay.classList.remove("visible");
+    }
+}
+
+async function verifyPasscodeSilent(passcode) {
+    try {
+        const res = await fetch(`${apiBase}/api/auth/verify`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ passcode })
+        });
+        if (res.ok) {
+            unlockConsole(passcode);
+        } else {
+            showLockScreen();
+        }
+    } catch (e) {
+        console.error("Verification error", e);
+        showLockScreen();
+    }
+}
+
+function unlockConsole(passcode) {
+    localStorage.setItem("athena_passcode", passcode);
+    hideLockScreen();
+    
+    // Sync passcode to Android Client if interface exists
+    if (window.AndroidInterface && typeof window.AndroidInterface.savePasscode === "function") {
+        try {
+            window.AndroidInterface.savePasscode(passcode);
+        } catch (e) {
+            console.error("Failed to sync passcode to Android", e);
+        }
+    }
+    
+    startDashboard();
+}
+
+async function submitPasscode() {
+    const input = document.getElementById("lock-passcode-input");
+    const errorEl = document.getElementById("lock-error-msg");
+    const passcode = input.value.trim();
+    
+    if (!passcode) return;
+    
+    try {
+        const res = await fetch(`${apiBase}/api/auth/verify`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ passcode })
+        });
+        
+        if (res.ok) {
+            errorEl.textContent = "";
+            errorEl.classList.remove("visible");
+            unlockConsole(passcode);
+        } else {
+            const data = await res.json();
+            errorEl.textContent = data.error || "Incorrect passcode";
+            errorEl.classList.add("visible");
+            // Trigger shake animation
+            errorEl.style.animation = 'none';
+            errorEl.offsetHeight; /* trigger reflow */
+            errorEl.style.animation = null;
+        }
+    } catch (e) {
+        errorEl.textContent = "Connection failed";
+        errorEl.classList.add("visible");
+    }
+}
 
 // ── TEXT-TO-SPEECH (TTS) ATHENA VOICE ──────────────────────────────────────────
 function initAthenaVoice() {
@@ -246,7 +382,7 @@ async function submitTextDictation() {
     addSimulatedSystemLog("User (Voice/Dictation)", text);
     
     try {
-        const res = await fetch(`${apiBase}/api/voice/dictate`, {
+        const res = await athenaFetch(`${apiBase}/api/voice/dictate`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ text: text })
@@ -268,7 +404,7 @@ async function submitTextDictation() {
 // ── DRAFT ENGINE LOGIC (CONSOLIDATED) ──────────────────────────────────────────
 async function loadDrafts() {
     try {
-        const res = await fetch(`${apiBase}/api/comms/drafts`);
+        const res = await athenaFetch(`${apiBase}/api/comms/drafts`);
         const drafts = await res.json();
         draftsData = {};
         drafts.forEach(d => { draftsData[d.id] = d; });
@@ -360,7 +496,7 @@ async function approveDraft(id) {
     saveDraft(id);
     const payload = draftsData[id]?.payload;
     try {
-        const res = await fetch(`${apiBase}/api/comms/approve`, {
+        const res = await athenaFetch(`${apiBase}/api/comms/approve`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id, payload })
@@ -389,7 +525,7 @@ function rejectDraft(id) {
 
 async function repeatTomorrow(id, repeat) {
     try {
-        const res = await fetch(`${apiBase}/api/comms/reject`, {
+        const res = await athenaFetch(`${apiBase}/api/comms/reject`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id, repeat_tomorrow: repeat })
@@ -444,7 +580,7 @@ function renderApprovalsQueue() {
 // ── BRIEF SYNOPSIS LOAD ────────────────────────────────────────────────────────
 async function loadBrief() {
     try {
-        const res = await fetch(`${apiBase}/api/brief`);
+        const res = await athenaFetch(`${apiBase}/api/brief`);
         const data = await res.json();
         
         // Render syntheses
@@ -488,7 +624,7 @@ function updateTimelineItem(id, block) {
 // ── PRIORITIES ENGINE LOAD ──────────────────────────────────────────────────────
 async function loadPriorities() {
     try {
-        const res = await fetch(`${apiBase}/api/priorities`);
+        const res = await athenaFetch(`${apiBase}/api/priorities`);
         const data = await res.json();
         const list = document.getElementById('priorities-list');
         if (!list) return;
@@ -517,7 +653,7 @@ async function submitFeedback() {
     if (!text) return;
     
     try {
-        const res = await fetch(`${apiBase}/api/brief/feedback`, {
+        const res = await athenaFetch(`${apiBase}/api/brief/feedback`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ feedback: text })
@@ -536,7 +672,7 @@ async function submitFeedback() {
 // ── TELEMETRY & SYSTEM LOGS ────────────────────────────────────────────────────
 async function fetchTelemetryData() {
     try {
-        const res = await fetch(`${apiBase}/api/devops/telemetry`);
+        const res = await athenaFetch(`${apiBase}/api/devops/telemetry`);
         const data = await res.json();
         
         const dbStatus = document.getElementById("tel-supabase");
@@ -582,7 +718,7 @@ function renderTelemetryChart(latencies) {
 
 async function fetchLogs() {
     try {
-        const res = await fetch(`${apiBase}/api/logs`);
+        const res = await athenaFetch(`${apiBase}/api/logs`);
         const logs = await res.json();
         const consoleEl = document.getElementById("console-logs");
         if (!consoleEl) return;

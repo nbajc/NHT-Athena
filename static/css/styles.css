@@ -1216,3 +1216,156 @@ h3 {
     color: var(--color-secondary);
 }
 
+/* ── ATHENA LOCK SCREEN OVERLAY ────────────────────────── */
+.lock-screen-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(5, 5, 8, 0.85);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.5s;
+    opacity: 0;
+    visibility: hidden;
+}
+
+.lock-screen-overlay.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.lock-screen-card {
+    background: rgba(22, 24, 28, 0.65);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    padding: 40px;
+    width: 90%;
+    max-width: 440px;
+    text-align: center;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 
+                0 0 40px rgba(212, 0, 122, 0.15);
+    position: relative;
+    overflow: hidden;
+    animation: lockCardEntrance 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes lockCardEntrance {
+    from { transform: translateY(30px) scale(0.95); opacity: 0; }
+    to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.lock-screen-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--gradient-hestia);
+}
+
+.lock-screen-logo {
+    width: 160px;
+    height: auto;
+    margin-bottom: 24px;
+    filter: drop-shadow(0 0 10px rgba(212, 0, 122, 0.35));
+}
+
+.lock-screen-title {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+    background: linear-gradient(90deg, #fff 0%, var(--text-secondary) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.lock-screen-subtitle {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 30px;
+}
+
+.lock-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+#lock-passcode-input {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 14px 16px;
+    color: #fff;
+    font-size: 15px;
+    text-align: center;
+    letter-spacing: 4px;
+    transition: all 0.3s;
+}
+
+#lock-passcode-input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 15px rgba(212, 0, 122, 0.25);
+    background: rgba(0, 0, 0, 0.5);
+}
+
+#lock-submit-btn {
+    background: var(--gradient-hestia);
+    border: none;
+    color: #fff;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    padding: 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(212, 0, 122, 0.3);
+    transition: all 0.3s;
+}
+
+#lock-submit-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(212, 0, 122, 0.5);
+    filter: brightness(1.1);
+}
+
+#lock-submit-btn:active {
+    transform: translateY(1px);
+}
+
+.lock-error-msg {
+    margin-top: 20px;
+    font-size: 12px;
+    color: var(--color-danger);
+    font-family: var(--font-mono);
+    min-height: 18px;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.lock-error-msg.visible {
+    opacity: 1;
+    animation: shakeError 0.4s ease-in-out;
+}
+
+@keyframes shakeError {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-6px); }
+    40%, 80% { transform: translateX(6px); }
+}
+

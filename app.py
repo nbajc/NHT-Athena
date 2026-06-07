@@ -18,6 +18,10 @@ from supabase import create_client, Client
 # Load environmental variables
 load_dotenv()
 
+# Read ATHENA_PASSCODE from environment, default to "athena2026"
+athena_passcode = os.getenv("ATHENA_PASSCODE") or "athena2026"
+athena_passcode = athena_passcode.strip('"\'')
+
 app = Flask(__name__)
 
 # Update CORS to support localized testing and production subdomain
@@ -26,6 +30,41 @@ CORS(app, origins=[
     "http://localhost:5000",
     "http://127.0.0.1:5000"
 ])
+
+@app.before_request
+def require_passcode():
+    # Only intercept API requests
+    if request.path.startswith("/api/"):
+        # Exclude public auth routes
+        exempt_routes = [
+            "/api/auth/verify",
+            "/api/auth/google",
+            "/api/auth/callback"
+        ]
+        if request.path in exempt_routes:
+            return None
+        
+        # Check authorization header or X-Athena-Token
+        auth_header = request.headers.get("Authorization")
+        token = request.headers.get("X-Athena-Token")
+        
+        if auth_header and auth_header.startswith("Bearer "):
+            header_token = auth_header[7:] # strip "Bearer "
+            if header_token == athena_passcode:
+                return None
+                
+        if token == athena_passcode:
+            return None
+            
+        return jsonify({"success": False, "error": "Unauthorized"}), 401
+
+@app.route("/api/auth/verify", methods=["POST"])
+def verify_passcode():
+    data = request.json or {}
+    passcode = data.get("passcode")
+    if passcode == athena_passcode:
+        return jsonify({"success": True, "message": "Access granted"})
+    return jsonify({"success": False, "error": "Incorrect passcode"}), 401
 
 # ── API Clients ────────────────────────────────────────────────────────────────
 anthropic_client = None

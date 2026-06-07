@@ -224,6 +224,11 @@ fun AthenaAppContainer(sharedPreferences: SharedPreferences, offlineQueue: Offli
                             }
 
                             @JavascriptInterface
+                            fun savePasscode(passcode: String) {
+                                sharedPreferences.edit().putString("athena_passcode", passcode).apply()
+                            }
+
+                            @JavascriptInterface
                             fun isNetworkAvailable(): Boolean {
                                 val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
                                 val activeNetwork = cm.activeNetwork ?: return false
@@ -233,7 +238,7 @@ fun AthenaAppContainer(sharedPreferences: SharedPreferences, offlineQueue: Offli
                         }, "AndroidInterface")
 
                         loadUrl(serverUrl)
-                    }
+
                 },
                 modifier = Modifier.fillMaxSize(),
                 update = { webView ->

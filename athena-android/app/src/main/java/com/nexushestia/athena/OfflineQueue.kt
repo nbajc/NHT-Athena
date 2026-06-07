@@ -113,6 +113,15 @@ class OfflineQueue(private val context: Context) : SQLiteOpenHelper(context, DAT
                 conn.requestMethod = "POST"
                 conn.setRequestProperty("Content-Type", "application/json; utf-8")
                 conn.setRequestProperty("Accept", "application/json")
+                
+                // Retrieve and add authentication headers
+                val prefs = context.getSharedPreferences("athena_prefs", Context.MODE_PRIVATE)
+                val passcode = prefs.getString("athena_passcode", null)
+                if (passcode != null) {
+                    conn.setRequestProperty("Authorization", "Bearer $passcode")
+                    conn.setRequestProperty("X-Athena-Token", passcode)
+                }
+
                 conn.doOutput = true
                 conn.connectTimeout = 8000
                 conn.readTimeout = 8000

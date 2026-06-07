@@ -222,6 +222,20 @@
     </style>
 </head>
 <body>
+    <!-- LOCK SCREEN OVERLAY -->
+    <div id="athena-lock-screen" class="lock-screen-overlay">
+        <div class="lock-screen-card">
+            <img src="/static/intricateNHT.png" alt="Nexus Hestia Technologies Logo" class="lock-screen-logo">
+            <h2 class="lock-screen-title">Athena Console Locked</h2>
+            <p class="lock-screen-subtitle">Sovereignty Access Authentication Required</p>
+            <div class="lock-input-group">
+                <input type="password" id="lock-passcode-input" placeholder="Enter secure passcode..." autocomplete="off">
+                <button id="lock-submit-btn" onclick="submitPasscode()">Access</button>
+            </div>
+            <div class="lock-error-msg" id="lock-error-msg"></div>
+        </div>
+    </div>
+
     <div class="glass-bg-glow"></div>
 
     <div class="app-container">
