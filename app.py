@@ -85,7 +85,7 @@ if google_key:
     google_key = google_key.strip('"\'')
     try:
         genai.configure(api_key=google_key)
-        gemini_model = genai.GenerativeModel("gemini-1.5-flash")
+        gemini_model = genai.GenerativeModel("gemini-2.0-flash")
         print(f"[GEMINI] Configured successfully using API key: {google_key[:10]}...")
     except Exception as e:
         print(f"[ERROR] Failed to initialize Gemini model: {e}")
