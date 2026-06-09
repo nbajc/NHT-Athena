@@ -1,6 +1,9 @@
 // ── STATE VARIABLES ───────────────────────────────────────────────────────────
 let apiBase = "https://api.athena.nexushestia.com"; // Defaults to Railway backend
-// Support overriding to local backend using ?local=true query parameter
+// Auto-detect local development
+if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+    apiBase = window.location.origin;
+}
 const urlParams = new URLSearchParams(window.location.search);
 if (urlParams.get('local') === 'true') {
     apiBase = window.location.origin;
