@@ -18,6 +18,15 @@ let dictationIndex = 0;
 let athenaVoice = null;
 let draftsData = {};
 
+function getSessionId() {
+    let sid = localStorage.getItem("athena_session_id");
+    if (!sid) {
+        sid = "session_" + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        localStorage.setItem("athena_session_id", sid);
+    }
+    return sid;
+}
+
 // ── DOM LOAD INITIALIZATION ───────────────────────────────────────────────────
 let dashboardStarted = false;
 function startDashboard() {
@@ -28,6 +37,7 @@ function startDashboard() {
     loadBrief();
     loadDrafts();
     loadPriorities();
+    loadStates();
     fetchTelemetryData();
     fetchLogs();
     
@@ -35,6 +45,7 @@ function startDashboard() {
     setInterval(fetchTelemetryData, 4000);
     setInterval(loadDrafts, 5000);
     setInterval(fetchLogs, 5000);
+    setInterval(loadStates, 10000); // Poll states every 10s
     setInterval(loadPriorities, 5 * 60 * 1000); // 5 min
 }
 
@@ -385,7 +396,7 @@ async function submitTextDictation() {
         const res = await athenaFetch(`${apiBase}/api/voice/dictate`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text: text })
+            body: JSON.stringify({ text: text, session_id: getSessionId() })
         });
         const data = await res.json();
         if (data.success) {
@@ -787,4 +798,126 @@ function escapeHtml(text) {
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
+}
+
+async function loadStates() {
+    try {
+        const res = await athenaFetch(`${apiBase}/api/states`);
+        const states = await res.json();
+        updateTimelineItem("state-routine", states.routine_block);
+        updateTimelineItem("state-target", states.target_block);
+        updateTimelineItem("state-anchor", states.anchor_block);
+    } catch(e) {
+        console.error("Failed to load timeline states", e);
+    }
+}
+
+// ── TIMELINE STATE MODAL HANDLERS ─────────────────────────────────────────────
+async function openStateModal(blockKey) {
+    const modal = document.getElementById("state-edit-modal");
+    if (!modal) return;
+    
+    document.getElementById("edit-state-block-key").value = blockKey;
+    
+    const titleEl = document.getElementById(`${blockKey.replace("_block", "")}-title`);
+    const timeEl = document.getElementById(`${blockKey.replace("_block", "")}-time`);
+    const statusEl = document.getElementById(`${blockKey.replace("_block", "")}-status`);
+    
+    document.getElementById("edit-state-title").value = titleEl ? titleEl.textContent : "";
+    document.getElementById("edit-state-time").value = timeEl ? timeEl.textContent : "";
+    document.getElementById("edit-state-status").value = statusEl ? statusEl.textContent : "";
+    
+    modal.style.display = "flex";
+}
+
+function closeStateModal() {
+    const modal = document.getElementById("state-edit-modal");
+    if (modal) modal.style.display = "none";
+}
+
+async function submitStateEdit() {
+    const block = document.getElementById("edit-state-block-key").value;
+    const title = document.getElementById("edit-state-title").value.trim();
+    const timeVal = document.getElementById("edit-state-time").value.trim();
+    const status = document.getElementById("edit-state-status").value.trim();
+    
+    if (!block) return;
+    
+    try {
+        const res = await athenaFetch(`${apiBase}/api/states`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ block, title, time: timeVal, status })
+        });
+        const data = await res.json();
+        if (data.success) {
+            closeStateModal();
+            loadStates();
+            addSimulatedSystemLog("State-Engine", `Successfully updated state block '${block}'`);
+            fetchLogs();
+        } else {
+            alert("Error updating block: " + (data.error || "unknown error"));
+        }
+    } catch(e) {
+        console.error(e);
+        alert("Failed to connect to backend to update state.");
+    }
+}
+
+// ── NEW DRAFT MODAL HANDLERS ───────────────────────────────────────────────────
+function openNewDraftModal() {
+    const modal = document.getElementById("new-draft-modal");
+    if (modal) {
+        modal.style.display = "flex";
+        document.getElementById("draft-recipient-input").value = "";
+        document.getElementById("draft-prompt-input").value = "";
+    }
+}
+
+function closeNewDraftModal() {
+    const modal = document.getElementById("new-draft-modal");
+    if (modal) modal.style.display = "none";
+}
+
+async function submitNewDraft() {
+    const recipient = document.getElementById("draft-recipient-input").value.trim();
+    const channel = document.getElementById("draft-channel-input").value;
+    const prompt = document.getElementById("draft-prompt-input").value.trim();
+    
+    if (!recipient || !prompt) {
+        alert("Recipient name and prompt instructions are required.");
+        return;
+    }
+    
+    const generateBtn = document.querySelector("#new-draft-modal button[onclick='submitNewDraft()']");
+    const originalText = generateBtn ? generateBtn.textContent : "Generate Draft";
+    if (generateBtn) {
+        generateBtn.disabled = true;
+        generateBtn.textContent = "Generating...";
+    }
+    
+    try {
+        const res = await athenaFetch(`${apiBase}/api/comms/draft/generate`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ recipient, channel, prompt })
+        });
+        const data = await res.json();
+        if (data.success) {
+            closeNewDraftModal();
+            loadDrafts();
+            addSimulatedSystemLog("Comms-Draft-Engine", `Generated new draft for ${recipient}`);
+            fetchLogs();
+        } else {
+            alert("Draft generation failed: " + (data.error || "unknown error"));
+        }
+    } catch(e) {
+        console.error(e);
+        alert("Draft generation failed due to connection error.");
+    } finally {
+        if (generateBtn) {
+            generateBtn.disabled = false;
+            generateBtn.textContent = originalText;
+        }
+    }
 }

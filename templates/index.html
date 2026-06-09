@@ -361,18 +361,18 @@
                                 <div class="timeline-badge routine"><i class="fa-solid fa-book-open"></i></div>
                                 <div class="timeline-content">
                                     <div class="time-header">
-                                        <h4>Routine Block</h4>
-                                        <span class="time-pill">07:00 - 09:00 AM</span>
+                                        <h4>Routine Block <i class="fa-solid fa-pen-to-square edit-state-btn" onclick="openStateModal('routine_block')" style="cursor:pointer; font-size:0.75rem; color:#888; margin-left:6px;" title="Edit Block"></i></h4>
+                                        <span class="time-pill" id="routine-time">07:00 - 09:00 AM</span>
                                     </div>
                                     <p class="title" id="routine-title">Denis + Mama Exam Prep</p>
-                                    <span class="status-indicator success">Active Daily Loop</span>
+                                    <span class="status-indicator success" id="routine-status">Active Daily Loop</span>
                                 </div>
                             </div>
                             <div class="timeline-item" id="state-target">
                                 <div class="timeline-badge target"><i class="fa-solid fa-graduation-cap"></i></div>
                                 <div class="timeline-content">
                                     <div class="time-header">
-                                        <h4>Target Block</h4>
+                                        <h4>Target Block <i class="fa-solid fa-pen-to-square edit-state-btn" onclick="openStateModal('target_block')" style="cursor:pointer; font-size:0.75rem; color:#888; margin-left:6px;" title="Edit Block"></i></h4>
                                         <span class="time-pill" id="target-time">—</span>
                                     </div>
                                     <p class="title" id="target-title">—</p>
@@ -383,7 +383,7 @@
                                 <div class="timeline-badge anchor"><i class="fa-solid fa-seedling"></i></div>
                                 <div class="timeline-content">
                                     <div class="time-header">
-                                        <h4>Anchor Block</h4>
+                                        <h4>Anchor Block <i class="fa-solid fa-pen-to-square edit-state-btn" onclick="openStateModal('anchor_block')" style="cursor:pointer; font-size:0.75rem; color:#888; margin-left:6px;" title="Edit Block"></i></h4>
                                         <span class="time-pill" id="anchor-time">—</span>
                                     </div>
                                     <p class="title" id="anchor-title">—</p>
@@ -402,7 +402,10 @@
                         <i class="fa-solid fa-paperclip icon-teal"></i>
                         <h2>Comms-Draft-Engine</h2>
                     </div>
-                    <span class="badge teal">Headless Loop</span>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <button onclick="openNewDraftModal()" style="background:rgba(100,200,180,0.15); border:1px solid rgba(100,200,180,0.3); color:#64c8b4; border-radius:4px; padding:3px 8px; font-family:'Space Mono', monospace; font-size:0.7rem; cursor:pointer; display:flex; align-items:center; gap:4px;" title="Manually create new draft"><i class="fa-solid fa-plus"></i> NEW</button>
+                        <span class="badge teal">Headless Loop</span>
+                    </div>
                 </div>
                 <div class="card-body">
                     <div class="section-info">
@@ -505,6 +508,57 @@
             <div class="footer-branding-right">
                 <span class="footer-status"><i class="fa-solid fa-circle success-text"></i> CORE SITES ACTIVE</span>
                 <span class="footer-link"><a href="https://nexushestia.com" target="_blank">NEXUSHESTIA.COM</a></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- TIMELINE STATE EDIT MODAL -->
+    <div id="state-edit-modal" class="lock-screen-overlay" style="display:none; align-items:center; justify-content:center; z-index:9999;">
+        <div class="lock-screen-card" style="max-width:400px; background:rgba(20,20,20,0.95); border:1px solid rgba(120,180,255,0.3); box-shadow:0 0 20px rgba(0,0,0,0.8);">
+            <h2 class="lock-screen-title" style="font-family:'Space Mono', monospace; font-size:1.1rem; color:#7aaaff; margin-bottom:15px; text-align:center;">Edit Timeline Block</h2>
+            <input type="hidden" id="edit-state-block-key">
+            <div class="modal-form-group" style="margin-bottom:12px; text-align:left;">
+                <label style="font-family:'Space Mono', monospace; font-size:0.75rem; color:#aaa; display:block; margin-bottom:4px;">Title</label>
+                <input type="text" id="edit-state-title" style="width:100%; padding:8px; background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.15); border-radius:4px; color:#fff; font-size:0.85rem; box-sizing:border-box;">
+            </div>
+            <div class="modal-form-group" style="margin-bottom:12px; text-align:left;">
+                <label style="font-family:'Space Mono', monospace; font-size:0.75rem; color:#aaa; display:block; margin-bottom:4px;">Time / Schedule</label>
+                <input type="text" id="edit-state-time" style="width:100%; padding:8px; background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.15); border-radius:4px; color:#fff; font-size:0.85rem; box-sizing:border-box;">
+            </div>
+            <div class="modal-form-group" style="margin-bottom:18px; text-align:left;">
+                <label style="font-family:'Space Mono', monospace; font-size:0.75rem; color:#aaa; display:block; margin-bottom:4px;">Status</label>
+                <input type="text" id="edit-state-status" style="width:100%; padding:8px; background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.15); border-radius:4px; color:#fff; font-size:0.85rem; box-sizing:border-box;">
+            </div>
+            <div style="display:flex; gap:10px; justify-content:flex-end;">
+                <button onclick="closeStateModal()" style="padding:6px 12px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); border-radius:4px; color:#fff; font-family:'Space Mono', monospace; font-size:0.75rem; cursor:pointer;">Cancel</button>
+                <button onclick="submitStateEdit()" style="padding:6px 12px; background:rgba(100,160,255,0.2); border:1px solid #7aaaff; border-radius:4px; color:#7aaaff; font-family:'Space Mono', monospace; font-size:0.75rem; cursor:pointer;">Save Block</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW DRAFT GENERATOR MODAL -->
+    <div id="new-draft-modal" class="lock-screen-overlay" style="display:none; align-items:center; justify-content:center; z-index:9999;">
+        <div class="lock-screen-card" style="max-width:450px; background:rgba(20,20,20,0.95); border:1px solid rgba(100,200,180,0.3); box-shadow:0 0 20px rgba(0,0,0,0.8);">
+            <h2 class="lock-screen-title" style="font-family:'Space Mono', monospace; font-size:1.1rem; color:#64c8b4; margin-bottom:15px; text-align:center;">Generate New Draft</h2>
+            <div class="modal-form-group" style="margin-bottom:12px; text-align:left;">
+                <label style="font-family:'Space Mono', monospace; font-size:0.75rem; color:#aaa; display:block; margin-bottom:4px;">Recipient Name</label>
+                <input type="text" id="draft-recipient-input" placeholder="e.g. Sasha Jokic" style="width:100%; padding:8px; background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.15); border-radius:4px; color:#fff; font-size:0.85rem; box-sizing:border-box;">
+            </div>
+            <div class="modal-form-group" style="margin-bottom:12px; text-align:left;">
+                <label style="font-family:'Space Mono', monospace; font-size:0.75rem; color:#aaa; display:block; margin-bottom:4px;">Channel / Platform</label>
+                <select id="draft-channel-input" style="width:100%; padding:8px; background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.15); border-radius:4px; color:#fff; font-size:0.85rem; box-sizing:border-box;">
+                    <option value="Gmail (Outreach)">Gmail</option>
+                    <option value="WhatsApp (Metrics)">WhatsApp</option>
+                    <option value="Instagram (Outreach)">Instagram</option>
+                </select>
+            </div>
+            <div class="modal-form-group" style="margin-bottom:18px; text-align:left;">
+                <label style="font-family:'Space Mono', monospace; font-size:0.75rem; color:#aaa; display:block; margin-bottom:4px;">AI Instructions (Prompt)</label>
+                <textarea id="draft-prompt-input" placeholder="e.g. Ask him if he checked the recertification dates and if he is free to grab coffee..." style="width:100%; min-height:80px; resize:vertical; padding:8px; background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.15); border-radius:4px; color:#fff; font-size:0.85rem; font-family:inherit; box-sizing:border-box;"></textarea>
+            </div>
+            <div style="display:flex; gap:10px; justify-content:flex-end;">
+                <button onclick="closeNewDraftModal()" style="padding:6px 12px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); border-radius:4px; color:#fff; font-family:'Space Mono', monospace; font-size:0.75rem; cursor:pointer;">Cancel</button>
+                <button onclick="submitNewDraft()" style="padding:6px 12px; background:rgba(100,200,180,0.2); border:1px solid #64c8b4; border-radius:4px; color:#64c8b4; font-family:'Space Mono', monospace; font-size:0.75rem; cursor:pointer;">Generate Draft</button>
             </div>
         </div>
     </div>

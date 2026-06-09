@@ -298,6 +298,101 @@ devops_telemetry = {
 
 brief_feedback_log = []
 
+# Global cache variables and chat session memory
+last_known_priorities = []
+last_known_brief = {"gemini_brief": "", "athena_synthesis": ""}
+chat_sessions = {}
+
+def get_realtime_context() -> str:
+    """Gathers current timezone values, timeline state blocks, priorities, and brief synthesis."""
+    now = datetime.datetime.now()
+    local_time_str = now.strftime("%Y-%m-%d %H:%M:%S")
+    belgrade_time = now + datetime.timedelta(hours=9)
+    belgrade_time_str = belgrade_time.strftime("%Y-%m-%d %H:%M:%S")
+    
+    states_str = json.dumps(orchestrator_states, indent=2)
+    
+    priorities_list = []
+    if last_known_priorities:
+        priorities_list = [p.get("text", "") for p in last_known_priorities]
+    elif supabase:
+        try:
+            res = supabase.table("priorities").select("text").order("created_at", desc=True).limit(10).execute()
+            if res.data:
+                priorities_list = [r["text"] for r in res.data]
+        except Exception as e:
+            print(f"Error reading priorities for context: {e}")
+            
+    if not priorities_list:
+        priorities_list = ["No priorities set yet."]
+        
+    priorities_str = "\n".join([f"- {p}" for p in priorities_list])
+    
+    brief_synth = ""
+    if last_known_brief.get("athena_synthesis"):
+        brief_synth = last_known_brief["athena_synthesis"]
+    elif supabase:
+        try:
+            res = supabase.table("briefs").select("athena_synthesis").order("created_at", desc=True).limit(1).execute()
+            if res.data:
+                brief_synth = res.data[0].get("athena_synthesis", "")
+        except Exception as e:
+            print(f"Error reading brief for context: {e}")
+            
+    if not brief_synth:
+        brief_synth = "No active daily brief synthesis."
+        
+    context = f"""Current Times:
+- Local Time: {local_time_str}
+- Belgrade Time: {belgrade_time_str}
+
+Active Persistent State Blocks:
+{states_str}
+
+Today's Actionable Priorities:
+{priorities_str}
+
+Latest Daily Briefing Synthesis:
+{brief_synth}
+"""
+    return context
+
+def ask_claude_with_memory(user_message: str, context: str = "", session_id: str = "default") -> str:
+    """Send a message to Claude maintaining 10 turns of conversation memory and system context."""
+    if not anthropic_client:
+        return "Claude unavailable: ANTHROPIC_API_KEY is not configured in settings."
+    try:
+        if session_id not in chat_sessions:
+            chat_sessions[session_id] = []
+            
+        history = chat_sessions[session_id][-10:]
+        
+        messages = []
+        for turn in history:
+            messages.append({"role": turn["role"], "content": turn["content"]})
+            
+        current_content = user_message
+        if context:
+            current_content = f"REAL-TIME CONTEXT:\n{context}\n\nUSER REQUEST:\n{user_message}"
+            
+        messages.append({"role": "user", "content": current_content})
+        
+        response = anthropic_client.messages.create(
+            model="claude-opus-4-5",
+            max_tokens=1024,
+            system=ATHENA_SYSTEM_PROMPT,
+            messages=messages
+        )
+        
+        assistant_response = response.content[0].text
+        
+        chat_sessions[session_id].append({"role": "user", "content": user_message})
+        chat_sessions[session_id].append({"role": "assistant", "content": assistant_response})
+        
+        return assistant_response
+    except Exception as e:
+        return f"Claude unavailable: {str(e)}"
+
 # ── Helper: Call Claude ────────────────────────────────────────────────────────
 def ask_claude(user_message: str, context: str = "") -> str:
     """Send a message to Claude with Athena's system prompt."""
@@ -448,6 +543,12 @@ def generate_daily_brief_internal():
             
     # Send FCM push
     send_fcm_notification("Morning Briefing Ready", "Your customized priority agenda has been created.")
+    
+    global last_known_brief
+    last_known_brief = {
+        "gemini_brief": gemini_brief,
+        "athena_synthesis": claude_synthesis
+    }
     
     system_logs.append({
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
@@ -744,6 +845,9 @@ def get_priorities():
             {"text": "Sasha Jokić / Cosmic Buildings follow-up.", "urgent": False},
         ]
 
+    global last_known_priorities
+    last_known_priorities = priorities
+
     system_logs.append({
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
         "source": "Priority-Engine",
@@ -1036,12 +1140,56 @@ def post_ask():
     """Direct QA pipeline with Athena/Claude."""
     data = request.json or {}
     question = data.get("question", "")
+    session_id = data.get("session_id", "default")
     
     if not question:
         return jsonify({"success": False, "error": "No question provided"}), 400
         
-    response = ask_claude(question)
+    context = get_realtime_context()
+    response = ask_claude_with_memory(question, context=context, session_id=session_id)
     return jsonify({"success": True, "response": response})
+
+@app.route("/api/states", methods=["GET"])
+def get_states():
+    """Returns the current persistent timeline state blocks."""
+    return jsonify(orchestrator_states)
+
+@app.route("/api/states", methods=["POST"])
+def update_state():
+    """Updates one of the timeline state blocks."""
+    data = request.json or {}
+    block_key = data.get("block") # 'routine_block', 'target_block', or 'anchor_block'
+    title = data.get("title")
+    time_val = data.get("time")
+    status = data.get("status")
+    
+    if not block_key or block_key not in orchestrator_states:
+        return jsonify({"success": False, "error": "Invalid block key"}), 400
+        
+    if title is not None:
+        orchestrator_states[block_key]["title"] = title
+    if time_val is not None:
+        orchestrator_states[block_key]["time"] = time_val
+    if status is not None:
+        orchestrator_states[block_key]["status"] = status
+        
+    # If Supabase is connected, we can also update the latest brief record's states
+    if supabase:
+        try:
+            res = supabase.table("briefs").select("id").order("created_at", desc=True).limit(1).execute()
+            if res.data:
+                latest_id = res.data[0]["id"]
+                supabase.table("briefs").update({"states": orchestrator_states}).eq("id", latest_id).execute()
+        except Exception as e:
+            print(f"Error syncing updated states to Supabase: {e}")
+            
+    system_logs.append({
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "source": "State-Engine",
+        "message": f"Updated timeline block '{block_key}': {title} | {time_val} | {status}"
+    })
+    
+    return jsonify({"success": True, "states": orchestrator_states})
 
 @app.route("/api/devops/telemetry", methods=["GET"])
 def get_telemetry():
@@ -1071,9 +1219,10 @@ def get_logs():
 
 @app.route("/api/voice/dictate", methods=["POST"])
 def post_dictation():
-    """Voice/dictation endpoint — routes to Claude for real reasoning."""
+    """Voice/dictation endpoint — routes to Claude with memory and context."""
     data = request.json or {}
     text = data.get("text", "")
+    session_id = data.get("session_id", "default")
     
     if not text:
         return jsonify({"success": False, "error": "No text provided"}), 400
@@ -1084,7 +1233,8 @@ def post_dictation():
         "message": f"Dictation received: '{text}'"
     })
     
-    claude_response = ask_claude(text)
+    context = get_realtime_context()
+    claude_response = ask_claude_with_memory(text, context=context, session_id=session_id)
     
     system_logs.append({
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
