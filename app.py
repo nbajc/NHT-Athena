@@ -80,16 +80,17 @@ else:
     print("[WARNING] ANTHROPIC_API_KEY is missing from environment. Claude integration will be disabled.")
 
 gemini_model = None
-google_key = os.getenv("GOOGLE_API_KEY") or os.getenv("google_api_key")
+google_key = os.getenv("GOOGLE_API_KEY") or os.getenv("google_api_key") or os.getenv("GEMINI_API_KEY") or os.getenv("gemini_api_key")
 if google_key:
     google_key = google_key.strip('"\'')
     try:
         genai.configure(api_key=google_key)
         gemini_model = genai.GenerativeModel("gemini-1.5-flash")
+        print(f"[GEMINI] Configured successfully using API key: {google_key[:10]}...")
     except Exception as e:
         print(f"[ERROR] Failed to initialize Gemini model: {e}")
 else:
-    print("[WARNING] GOOGLE_API_KEY is missing from environment. Gemini integration will be disabled.")
+    print("[WARNING] GOOGLE_API_KEY/GEMINI_API_KEY is missing from environment. Gemini integration will be disabled.")
 
 # Initialize Supabase client
 supabase_url = os.getenv("SUPABASE_URL") or os.getenv("supabase_url")
