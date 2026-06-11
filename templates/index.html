@@ -232,6 +232,12 @@
                 <input type="password" id="lock-passcode-input" placeholder="Enter secure passcode..." autocomplete="off">
                 <button id="lock-submit-btn" onclick="submitPasscode()">Access</button>
             </div>
+            <div class="auth-divider">
+                <span>OR</span>
+            </div>
+            <button id="lock-google-btn" class="btn-google-login" onclick="startGoogleAuth()">
+                <i class="fa-brands fa-google"></i> Sign in with Google
+            </button>
             <div class="lock-error-msg" id="lock-error-msg"></div>
         </div>
     </div>
@@ -308,6 +314,16 @@
                         <h3><i class="fa-solid fa-user-check"></i> Pending Broadcast Approvals</h3>
                         <div id="approvals-list" class="approvals-list">
                             <div class="loading-placeholder">Loading pending items...</div>
+                        </div>
+                    </div>
+
+                    <div class="long-term-goals-module" style="margin-top:20px; border-top:1px solid rgba(255,255,255,0.06); padding-top:16px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                            <h3 style="margin-bottom:0; color:var(--color-success);"><i class="fa-solid fa-vault"></i> Long-Term Goals</h3>
+                            <button onclick="openNewGoalModal()" style="background:rgba(71,200,255,0.12); border:1px solid rgba(71,200,255,0.25); color:#7aaaff; border-radius:4px; padding:2px 8px; font-family:'Space Mono', monospace; font-size:0.7rem; cursor:pointer;"><i class="fa-solid fa-plus"></i> ADD</button>
+                        </div>
+                        <div id="long-term-goals-list" class="goals-list">
+                            <div class="loading-placeholder">Loading goals...</div>
                         </div>
                     </div>
                 </div>
@@ -559,6 +575,69 @@
             <div style="display:flex; gap:10px; justify-content:flex-end;">
                 <button onclick="closeNewDraftModal()" style="padding:6px 12px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); border-radius:4px; color:#fff; font-family:'Space Mono', monospace; font-size:0.75rem; cursor:pointer;">Cancel</button>
                 <button onclick="submitNewDraft()" style="padding:6px 12px; background:rgba(100,200,180,0.2); border:1px solid #64c8b4; border-radius:4px; color:#64c8b4; font-family:'Space Mono', monospace; font-size:0.75rem; cursor:pointer;">Generate Draft</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- EDIT DRAFT MODAL -->
+    <div id="edit-draft-modal" class="lock-screen-overlay" style="display:none; align-items:center; justify-content:center; z-index:9999;">
+        <div class="lock-screen-card" style="max-width:550px; width:90%; background:rgba(20,20,20,0.96); border:1px solid rgba(100,200,255,0.35); box-shadow:0 0 25px rgba(0,0,0,0.85); border-radius:10px;">
+            <h2 class="lock-screen-title" style="font-family:'Space Mono', monospace; font-size:1.15rem; color:#7aaaff; margin-bottom:12px; text-align:center;">Edit Message Payload</h2>
+            
+            <div class="modal-draft-info" style="font-family:'Space Mono', monospace; font-size:0.75rem; color:#888; background:rgba(255,255,255,0.02); padding:6px 10px; border-radius:4px; margin-bottom:12px; display:flex; justify-content:space-between;">
+                <span>Channel: <strong id="modal-draft-channel" style="color:#e0e0e0;">-</strong></span>
+                <span>To: <strong id="modal-draft-recipient" style="color:#7aaaff;">-</strong></span>
+            </div>
+            
+            <input type="hidden" id="edit-draft-id">
+            
+            <div class="modal-form-group" style="margin-bottom:12px; text-align:left;">
+                <label style="font-family:'Space Mono', monospace; font-size:0.72rem; color:#aaa; display:block; margin-bottom:4px;">Message Text</label>
+                <textarea id="edit-draft-payload" style="width:100%; min-height:160px; max-height:280px; resize:vertical; padding:10px; background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#fff; font-size:0.85rem; font-family:'DM Sans', sans-serif; line-height:1.5; box-sizing:border-box;"></textarea>
+            </div>
+            
+            <!-- AI REWORK INTERFACE -->
+            <div class="modal-form-group rework-group" style="margin-bottom:18px; text-align:left; border-top:1px solid rgba(255,255,255,0.06); padding-top:12px;">
+                <label style="font-family:'Space Mono', monospace; font-size:0.72rem; color:#64c8b4; display:block; margin-bottom:6px;"><i class="fa-solid fa-wand-magic-sparkles"></i> Athena AI Rework Instruction</label>
+                <div style="display:flex; gap:8px;">
+                    <input type="text" id="edit-draft-rework-instruction" placeholder="e.g. Make it more professional, write in Serbian, add project stats..." style="flex:1; padding:8px 12px; background:rgba(0,0,0,0.5); border:1px solid rgba(100,200,180,0.25); border-radius:6px; color:#fff; font-size:0.82rem; box-sizing:border-box;">
+                    <button onclick="submitReworkWithAI()" id="btn-rework-ai" style="padding:8px 14px; background:rgba(100,200,180,0.15); border:1px solid rgba(100,200,180,0.3); border-radius:6px; color:#64c8b4; font-family:'Space Mono', monospace; font-size:0.72rem; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all 0.15s;">
+                        <i class="fa-solid fa-bolt"></i> Rework
+                    </button>
+                </div>
+            </div>
+            
+            <div style="display:flex; gap:10px; justify-content:flex-end;">
+                <button onclick="closeEditDraftModal()" style="padding:8px 16px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#fff; font-family:'Space Mono', monospace; font-size:0.75rem; cursor:pointer;">Cancel</button>
+                <button onclick="submitDraftSave()" id="btn-save-draft-modal" style="padding:8px 16px; background:rgba(100,160,255,0.2); border:1px solid #7aaaff; border-radius:6px; color:#7aaaff; font-family:'Space Mono', monospace; font-size:0.75rem; cursor:pointer; display:flex; align-items:center; gap:6px;">
+                    <i class="fa-solid fa-floppy-disk"></i> Save Changes
+                </button>
+                <button onclick="submitDraftApproveFromModal()" id="btn-approve-draft-modal" style="padding:8px 16px; background:linear-gradient(135deg, var(--color-success), #00b894); border:none; border-radius:6px; color:#000; font-family:'Space Mono', monospace; font-size:0.75rem; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px;">
+                    <i class="fa-solid fa-paper-plane"></i> Approve & Send
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW GOAL MODAL -->
+    <div id="new-goal-modal" class="lock-screen-overlay" style="display:none; align-items:center; justify-content:center; z-index:9999;">
+        <div class="lock-screen-card" style="max-width:420px; background:rgba(20,20,20,0.95); border:1px solid rgba(71,200,255,0.3); box-shadow:0 0 20px rgba(0,0,0,0.8); border-radius:10px;">
+            <h2 class="lock-screen-title" style="font-family:'Space Mono', monospace; font-size:1.1rem; color:#7aaaff; margin-bottom:15px; text-align:center;">Add Long-Term Goal</h2>
+            <div class="modal-form-group" style="margin-bottom:12px; text-align:left;">
+                <label style="font-family:'Space Mono', monospace; font-size:0.75rem; color:#aaa; display:block; margin-bottom:4px;">Goal Title</label>
+                <input type="text" id="goal-title-input" placeholder="e.g. Technosomatic Exhibition Show" style="width:100%; padding:8px; background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.15); border-radius:4px; color:#fff; font-size:0.85rem; box-sizing:border-box;">
+            </div>
+            <div class="modal-form-group" style="margin-bottom:12px; text-align:left;">
+                <label style="font-family:'Space Mono', monospace; font-size:0.75rem; color:#aaa; display:block; margin-bottom:4px;">Due Date</label>
+                <input type="date" id="goal-date-input" style="width:100%; padding:8px; background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.15); border-radius:4px; color:#fff; font-size:0.85rem; box-sizing:border-box;">
+            </div>
+            <div class="modal-form-group" style="margin-bottom:18px; text-align:left;">
+                <label style="font-family:'Space Mono', monospace; font-size:0.75rem; color:#aaa; display:block; margin-bottom:4px;">Details (Optional)</label>
+                <textarea id="goal-desc-input" placeholder="Additional details or context..." style="width:100%; min-height:60px; resize:vertical; padding:8px; background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.15); border-radius:4px; color:#fff; font-size:0.85rem; font-family:inherit; box-sizing:border-box;"></textarea>
+            </div>
+            <div style="display:flex; gap:10px; justify-content:flex-end;">
+                <button onclick="closeNewGoalModal()" style="padding:6px 12px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); border-radius:4px; color:#fff; font-family:'Space Mono', monospace; font-size:0.75rem; cursor:pointer;">Cancel</button>
+                <button onclick="submitNewGoal()" style="padding:6px 12px; background:rgba(71,200,255,0.2); border:1px solid #7aaaff; border-radius:4px; color:#7aaaff; font-family:'Space Mono', monospace; font-size:0.75rem; cursor:pointer;">Save Goal</button>
             </div>
         </div>
     </div>

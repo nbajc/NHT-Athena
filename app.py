@@ -281,6 +281,23 @@ comms_drafts = {
     }
 }
 
+active_memory_goals = [
+    {
+        "id": "goal_1",
+        "title": "Technosomatic Cyberfeminism 2.0 solo show (ARC Gallery)",
+        "description": "Prepare solo show artwork and coordination. Deadline June 20, show in September 2026.",
+        "due_date": "2026-06-20",
+        "completed": False
+    },
+    {
+        "id": "goal_2",
+        "title": "TFAP@CAA Paper Proposal submission",
+        "description": "Prepare abstract and submit proposal.",
+        "due_date": "2026-07-15",
+        "completed": False
+    }
+]
+
 system_logs = [
     {"timestamp": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 3600)), "source": "Athena-Core", "message": "System initialization complete. Sovereignty guardrails loaded."},
     {"timestamp": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 3200)), "source": "Brief-Orchestrator", "message": "Routine block 'Dennis + Mama Exam Prep' synced and tracked."},
@@ -306,10 +323,18 @@ chat_sessions = {}
 
 def get_realtime_context() -> str:
     """Gathers current timezone values, timeline state blocks, priorities, and brief synthesis."""
-    now = datetime.datetime.now()
-    local_time_str = now.strftime("%Y-%m-%d %H:%M:%S")
-    belgrade_time = now + datetime.timedelta(hours=9)
-    belgrade_time_str = belgrade_time.strftime("%Y-%m-%d %H:%M:%S")
+    from pytz import timezone
+    la_tz = timezone('America/Los_Angeles')
+    belgrade_tz = timezone('Europe/Belgrade')
+    
+    now_utc = datetime.datetime.now(datetime.timezone.utc)
+    la_time = now_utc.astimezone(la_tz)
+    belgrade_time = now_utc.astimezone(belgrade_tz)
+    
+    local_time_str = la_time.strftime("%Y-%m-%d %H:%M:%S %Z")
+    belgrade_time_str = belgrade_time.strftime("%Y-%m-%d %H:%M:%S %Z")
+    local_date_str = la_time.strftime("%A, %B %d, %Y")
+    belgrade_date_str = belgrade_time.strftime("%A, %B %d, %Y")
     
     states_str = json.dumps(orchestrator_states, indent=2)
     
@@ -343,9 +368,31 @@ def get_realtime_context() -> str:
     if not brief_synth:
         brief_synth = "No active daily brief synthesis."
         
+    # Fetch active long-term goals for permanent memory injection
+    goals_list = []
+    if supabase:
+        try:
+            res_goals = supabase.table("long_term_goals").select("*").eq("completed", False).order("due_date", desc=False).execute()
+            if res_goals.data:
+                goals_list = res_goals.data
+        except Exception as e:
+            print(f"Error reading long term goals for context: {e}")
+            
+    if not goals_list:
+        goals_list = [g for g in active_memory_goals if not g["completed"]]
+        goals_list.sort(key=lambda x: x["due_date"])
+        
+    if goals_list:
+        goals_str = "\n".join([f"- {g['title']} (Due: {g['due_date']}){': ' + g['description'] if g.get('description') else ''}" for g in goals_list])
+    else:
+        goals_str = "No active long-term goals."
+        
     context = f"""Current Times:
-- Local Time: {local_time_str}
-- Belgrade Time: {belgrade_time_str}
+- Local Time (LA): {local_time_str} ({local_date_str})
+- Belgrade Time: {belgrade_time_str} ({belgrade_date_str})
+
+Active Long-Term Goals (in permanent memory):
+{goals_str}
 
 Active Persistent State Blocks:
 {states_str}
@@ -420,7 +467,13 @@ def generate_brief_with_gemini(raw_data: dict) -> str:
     if not gemini_model:
         return "Gemini brief unavailable: GOOGLE_API_KEY is not configured in settings."
     try:
+        now_utc = datetime.datetime.now(datetime.timezone.utc)
+        la_time = now_utc.astimezone(timezone('America/Los_Angeles'))
+        current_date_str = la_time.strftime("%A, %B %d, %Y")
+        
         prompt = f"""
+        Current Date: {current_date_str}
+        
         Generate a concise, structured daily brief for Natasha Bajc based on this data:
         
         Calendar events today: {raw_data.get('calendar', 'No events found')}
@@ -525,11 +578,61 @@ def generate_daily_brief_internal():
     # Generate brief & synthesis
     gemini_brief = generate_brief_with_gemini(raw_data)
     
+    # Fallback to Claude if Gemini fails or hits quota limits
+    if not gemini_brief or "unavailable" in gemini_brief.lower() or "limit" in gemini_brief.lower() or "quota" in gemini_brief.lower() or "429" in gemini_brief:
+        print("[WARNING] Gemini brief generation failed or hit quota. Falling back to Claude for structured brief...")
+        fallback_prompt = f"""
+        Generate a concise, structured daily brief for Natasha Bajc based on this raw data:
+        
+        Calendar events today: {raw_data.get('calendar', 'No events found')}
+        Emails requiring attention: {raw_data.get('emails', 'None')}
+        Active tasks: {raw_data.get('tasks', 'None')}
+        
+        Format as:
+        - 3 bullet priorities for today
+        - Any urgent flags
+        - One sentence on what can wait
+        
+        Be direct. No filler.
+        """
+        gemini_brief = ask_claude(fallback_prompt)
+    
+    now_utc = datetime.datetime.now(datetime.timezone.utc)
+    la_time = now_utc.astimezone(timezone('America/Los_Angeles'))
+    belgrade_time = now_utc.astimezone(timezone('Europe/Belgrade'))
+    la_date_str = la_time.strftime("%A, %B %d, %Y")
+    la_time_str = la_time.strftime("%I:%M %p")
+    belgrade_time_str = belgrade_time.strftime("%I:%M %p")
+    
+    # Get active long-term goals
+    goals_list = []
+    if supabase:
+        try:
+            res_goals = supabase.table("long_term_goals").select("*").eq("completed", False).order("due_date", desc=False).execute()
+            if res_goals.data:
+                goals_list = res_goals.data
+        except Exception as e:
+            print(f"Error querying long_term_goals for brief: {e}")
+    if not goals_list:
+        goals_list = [g for g in active_memory_goals if not g["completed"]]
+        
+    goals_str = "\n".join([f"- {g['title']} (Due: {g['due_date']})" for g in goals_list]) if goals_list else "None"
+
+    brief_time_context = f"""Current Date: {la_date_str}
+Current LA Time: {la_time_str}
+Current Belgrade Time: {belgrade_time_str}
+
+Active Long-Term Goals (Permanent Memory):
+{goals_str}
+
+DAILY BRIEF DATA:
+{gemini_brief}"""
+
     prompt = "Review this daily brief and tell me what Natasha should focus on first today, and flag anything critical."
     if feedback_context:
         prompt += f"\n\n{feedback_context}"
         
-    claude_synthesis = ask_claude(prompt, context=gemini_brief)
+    claude_synthesis = ask_claude(prompt, context=brief_time_context)
     
     # Store to Supabase
     if supabase:
@@ -633,6 +736,49 @@ def auth_callback():
         'scopes': credentials.scopes
     }
     
+    # Fetch authenticated user profile using the Gmail API
+    email = ""
+    try:
+        gmail_service = build('gmail', 'v1', credentials=credentials)
+        profile = gmail_service.users().getProfile(userId='me').execute()
+        email = profile.get('emailAddress', '').lower().strip()
+        print(f"[AUTH] Google callback authenticated user email: {email}")
+    except Exception as e:
+        print(f"[AUTH ERROR] Failed to fetch Google profile: {e}")
+        
+    # Check against preapproved email list
+    is_preapproved = False
+    if email:
+        preapproved_emails = [
+            "natasha@nexushestia.com",
+            "natasha.bajc@nexushestia.com",
+            "natasabajc@gmail.com",
+            "natasa.bajc@gmail.com"
+        ]
+        if email in preapproved_emails or email.endswith("@nexushestia.com"):
+            is_preapproved = True
+            
+        # Check against Supabase users table (hosted access similar to Cosmic Buildings)
+        if supabase:
+            try:
+                res_user = supabase.table("users").select("*").eq("email", email).execute()
+                if res_user.data:
+                    user_record = res_user.data[0]
+                    if user_record.get("approved") is True:
+                        is_preapproved = True
+                        print(f"[AUTH] User '{email}' authenticated via Supabase users table (role: {user_record.get('role')})")
+            except Exception as e:
+                print(f"[AUTH ERROR] Failed to query users table in Supabase: {e}")
+            
+    if 'localhost' in host or '127.0.0.1' in host:
+        dest_url = 'http://localhost:5000/'
+    else:
+        dest_url = 'https://athena.nexushestia.com/'
+        
+    if not is_preapproved:
+        print(f"[AUTH DENIED] Email '{email}' is not authorized to access Athena.")
+        return redirect(f"{dest_url}?auth=failed&error=unauthorized_email")
+        
     if supabase:
         try:
             supabase.table("oauth_tokens").upsert({
@@ -643,11 +789,7 @@ def auth_callback():
         except Exception as e:
             print(f"Error saving tokens: {e}")
             
-    # Redirect back to dashboard
-    if 'localhost' in host or '127.0.0.1' in host:
-        return redirect('http://localhost:5000/?auth=success')
-    else:
-        return redirect('https://athena.nexushestia.com/?auth=success')
+    return redirect(f"{dest_url}?auth=success&passcode={athena_passcode}")
 
 # ── General Routes ─────────────────────────────────────────────────────────────
 @app.route("/api/config", methods=["GET"])
@@ -781,7 +923,27 @@ def get_priorities():
         except Exception as e:
             print(f"Error querying Google data for priorities: {e}")
 
+    now_utc = datetime.datetime.now(datetime.timezone.utc)
+    la_time = now_utc.astimezone(timezone('America/Los_Angeles'))
+    current_date_str = la_time.strftime("%A, %B %d, %Y")
+    
+    # Get active long-term goals for priorities
+    goals_list = []
+    if supabase:
+        try:
+            res_goals = supabase.table("long_term_goals").select("*").eq("completed", False).order("due_date", desc=False).execute()
+            if res_goals.data:
+                goals_list = res_goals.data
+        except Exception as e:
+            print(f"Error querying goals for priorities: {e}")
+    if not goals_list:
+        goals_list = [g for g in active_memory_goals if not g["completed"]]
+    goals_str = ", ".join([f"{g['title']} (Due {g['due_date']})" for g in goals_list]) if goals_list else "None"
+
     gemini_priorities_prompt = f"""
+    Current Date: {current_date_str}
+    Active Long-Term Goals (Permanent Memory): {goals_str}
+    
     Generate a prioritized task list for Natasha Bajc for today based on:
     
     Calendar: {raw_data['calendar']}
@@ -796,10 +958,32 @@ def get_priorities():
     """
 
     try:
+        if not gemini_model:
+            raise Exception("Gemini model not initialized")
         gemini_response = gemini_model.generate_content(gemini_priorities_prompt)
         gemini_priorities_raw = gemini_response.text
     except Exception as e:
-        gemini_priorities_raw = f"Gemini unavailable: {str(e)}"
+        print(f"[WARNING] Gemini priorities generation failed or hit quota: {e}. Falling back to Claude...")
+        try:
+            fallback_prompt = f"""
+            You are Athena, Natasha's sovereign executive assistant. 
+            Current Date: {current_date_str}
+            Active Long-Term Goals (Permanent Memory): {goals_str}
+            
+            Based on this data:
+            Calendar: {raw_data['calendar']}
+            Emails: {raw_data['emails']}
+            Tasks: {raw_data['tasks']}
+            Active Projects: {raw_data['active_projects']}
+            {feedback_context}
+            
+            Return ONLY a numbered list of 5-7 priorities, one per line.
+            Mark urgent items with [URGENT] at the start.
+            Be specific and actionable. No filler.
+            """
+            gemini_priorities_raw = ask_claude(fallback_prompt)
+        except Exception as ex:
+            gemini_priorities_raw = f"Gemini and Claude fallback unavailable: {str(ex)}"
 
     claude_prompt = f"""
     Based on these raw priorities from Gemini:
@@ -912,6 +1096,31 @@ def generate_draft():
             
     comms_drafts[draft_id] = draft
     return jsonify({"success": True, "draft": draft})
+
+@app.route("/api/comms/draft/save", methods=["POST"])
+def save_draft():
+    data = request.json or {}
+    draft_id = data.get("id")
+    payload = data.get("payload")
+    
+    if not draft_id or not payload:
+        return jsonify({"success": False, "error": "Missing id or payload"}), 400
+        
+    try:
+        if supabase:
+            supabase.table("drafts").update({"payload": payload}).eq("id", draft_id).execute()
+            
+        if draft_id in comms_drafts:
+            comms_drafts[draft_id]["payload"] = payload
+            
+        system_logs.append({
+            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "source": "Comms-Draft-Engine",
+            "message": f"Draft saved locally/remotely: ID '{draft_id}'."
+        })
+        return jsonify({"success": True, "message": "Draft saved successfully"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route("/api/comms/approve", methods=["POST"])
 def approve_draft():
@@ -1149,6 +1358,82 @@ def post_ask():
     context = get_realtime_context()
     response = ask_claude_with_memory(question, context=context, session_id=session_id)
     return jsonify({"success": True, "response": response})
+
+# ── Goals Routes ─────────────────────────────────────────────────────────────
+@app.route("/api/goals", methods=["GET"])
+def get_goals():
+    if supabase:
+        try:
+            res = supabase.table("long_term_goals").select("*").eq("completed", False).order("due_date", desc=False).execute()
+            return jsonify(res.data)
+        except Exception as e:
+            print(f"Error querying long_term_goals: {e}")
+            
+    # Return sorted memory goals
+    active = [g for g in active_memory_goals if not g["completed"]]
+    active.sort(key=lambda x: x["due_date"])
+    return jsonify(active)
+
+@app.route("/api/goals", methods=["POST"])
+def create_goal():
+    data = request.json or {}
+    title = data.get("title")
+    description = data.get("description", "")
+    due_date = data.get("due_date")
+    
+    if not title or not due_date:
+        return jsonify({"success": False, "error": "Missing title or due_date"}), 400
+        
+    goal_id = f"goal_{int(time.time())}"
+    goal = {
+        "id": goal_id,
+        "title": title,
+        "description": description,
+        "due_date": due_date,
+        "completed": False
+    }
+    
+    if supabase:
+        try:
+            supabase.table("long_term_goals").insert(goal).execute()
+        except Exception as e:
+            print(f"Error saving goal to Supabase: {e}")
+            
+    active_memory_goals.append(goal)
+    
+    system_logs.append({
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "source": "Memory-Vault",
+        "message": f"Offloaded new long-term goal: '{title}' (due {due_date})."
+    })
+    
+    return jsonify({"success": True, "goal": goal})
+
+@app.route("/api/goals/complete", methods=["POST"])
+def complete_goal_api():
+    data = request.json or {}
+    goal_id = data.get("id")
+    
+    if not goal_id:
+        return jsonify({"success": False, "error": "Missing goal ID"}), 400
+        
+    if supabase:
+        try:
+            supabase.table("long_term_goals").update({"completed": True}).eq("id", goal_id).execute()
+        except Exception as e:
+            print(f"Error updating goal: {e}")
+            
+    for g in active_memory_goals:
+        if g["id"] == goal_id:
+            g["completed"] = True
+            system_logs.append({
+                "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "source": "Memory-Vault",
+                "message": f"Completed long-term goal: '{g['title']}'."
+            })
+            break
+            
+    return jsonify({"success": True})
 
 @app.route("/api/states", methods=["GET"])
 def get_states():

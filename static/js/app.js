@@ -41,6 +41,7 @@ function startDashboard() {
     loadDrafts();
     loadPriorities();
     loadStates();
+    loadGoals(); // Load long-term goals
     fetchTelemetryData();
     fetchLogs();
     
@@ -49,6 +50,7 @@ function startDashboard() {
     setInterval(loadDrafts, 5000);
     setInterval(fetchLogs, 5000);
     setInterval(loadStates, 10000); // Poll states every 10s
+    setInterval(loadGoals, 30000); // Poll goals every 30s
     setInterval(loadPriorities, 5 * 60 * 1000); // 5 min
 }
 
@@ -83,12 +85,38 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
     
-    // Authenticate / Check passcode
-    const passcode = localStorage.getItem("athena_passcode");
-    if (passcode) {
-        verifyPasscodeSilent(passcode);
-    } else {
+    // Check URL parameters for OAuth status
+    const authStatus = urlParams.get('auth');
+    const passcodeParam = urlParams.get('passcode');
+    const authError = urlParams.get('error');
+    
+    if (authStatus === 'success' && passcodeParam) {
+        unlockConsole(passcodeParam);
+        addSimulatedSystemLog("Google Auth", "Access granted via Google Sign-In with preapproved email.");
+        // Clean URL parameters
+        window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (authStatus === 'failed' || authError) {
         showLockScreen();
+        const errorEl = document.getElementById("lock-error-msg");
+        if (errorEl) {
+            if (authError === 'unauthorized_email') {
+                errorEl.textContent = "Your Google account is not authorized to access Athena.";
+            } else {
+                errorEl.textContent = "Google authentication failed: " + (authError || "unknown error");
+            }
+            errorEl.classList.add("visible");
+        }
+        addSimulatedSystemLog("Google Auth", `Authentication failed: ${authError || 'unknown'}`);
+        // Clean URL parameters
+        window.history.replaceState({}, document.title, window.location.pathname);
+    } else {
+        // Authenticate / Check passcode
+        const passcode = localStorage.getItem("athena_passcode");
+        if (passcode) {
+            verifyPasscodeSilent(passcode);
+        } else {
+            showLockScreen();
+        }
     }
 });
 
@@ -450,16 +478,13 @@ function buildDraftCard(d) {
             <span class="draft-status pending" id="draft-status-${d.id}">PENDING APPROVAL</span>
         </div>
 
-        <textarea class="draft-textarea" id="textarea-${d.id}" readonly>${escapeHtml(d.payload)}</textarea>
+        <textarea class="draft-textarea" id="textarea-${d.id}" readonly style="cursor: pointer;" onclick="editDraft('${d.id}')">${escapeHtml(d.payload)}</textarea>
 
         <div class="draft-action-bar" id="actions-${d.id}">
             <span class="broadcast-badge"><i class="fa-solid fa-tower-broadcast"></i> ${d.broadcast_type}</span>
             <div class="btn-group">
                 <button class="btn-edit" id="edit-btn-${d.id}" onclick="editDraft('${d.id}')">
                     <i class="fa-solid fa-pen"></i> Edit
-                </button>
-                <button class="btn-save" id="save-btn-${d.id}" style="display:none;" onclick="saveDraft('${d.id}')">
-                    <i class="fa-solid fa-floppy-disk"></i> Save
                 </button>
                 <button class="reject-btn" onclick="rejectDraft('${d.id}')">
                     <i class="fa-solid fa-ban"></i> Reject
@@ -481,33 +506,103 @@ function buildDraftCard(d) {
 }
 
 function editDraft(id) {
-    const ta = document.getElementById(`textarea-${id}`);
-    const editBtn = document.getElementById(`edit-btn-${id}`);
-    const saveBtn = document.getElementById(`save-btn-${id}`);
-    if (!ta) return;
+    const draft = draftsData[id];
+    if (!draft) return;
     
-    ta.removeAttribute('readonly');
-    ta.focus();
-    editBtn.style.display = 'none';
-    saveBtn.style.display = 'inline-block';
-    addSimulatedSystemLog('Comms-Draft-Engine', `Draft for ${draftsData[id]?.recipient} opened for editing.`);
+    const modal = document.getElementById("edit-draft-modal");
+    if (!modal) return;
+    
+    document.getElementById("edit-draft-id").value = id;
+    document.getElementById("modal-draft-channel").textContent = draft.channel;
+    document.getElementById("modal-draft-recipient").textContent = draft.recipient;
+    document.getElementById("edit-draft-payload").value = draft.payload;
+    document.getElementById("edit-draft-rework-instruction").value = "";
+    
+    modal.style.display = "flex";
+    addSimulatedSystemLog('Comms-Draft-Engine', `Draft for ${draft.recipient} opened in edit modal.`);
 }
 
-function saveDraft(id) {
-    const ta = document.getElementById(`textarea-${id}`);
-    const editBtn = document.getElementById(`edit-btn-${id}`);
-    const saveBtn = document.getElementById(`save-btn-${id}`);
-    if (!ta) return;
+function closeEditDraftModal() {
+    const modal = document.getElementById("edit-draft-modal");
+    if (modal) modal.style.display = "none";
+}
+
+async function submitDraftSave() {
+    const id = document.getElementById("edit-draft-id").value;
+    const payload = document.getElementById("edit-draft-payload").value;
     
-    ta.setAttribute('readonly', true);
-    editBtn.style.display = 'inline-block';
-    saveBtn.style.display = 'none';
-    if (draftsData[id]) draftsData[id].payload = ta.value;
-    addSimulatedSystemLog('Comms-Draft-Engine', `Draft edits locally staged.`);
+    if (!id || !payload) return;
+    
+    const saveBtn = document.getElementById("btn-save-draft-modal");
+    const originalText = saveBtn.innerHTML;
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Saving...';
+    
+    try {
+        const res = await athenaFetch(`${apiBase}/api/comms/draft/save`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id, payload })
+        });
+        const data = await res.json();
+        if (data.success) {
+            if (draftsData[id]) draftsData[id].payload = payload;
+            closeEditDraftModal();
+            loadDrafts();
+            addSimulatedSystemLog('Comms-Draft-Engine', `Draft edits saved and persisted.`);
+        } else {
+            alert("Failed to save draft: " + (data.error || "unknown error"));
+        }
+    } catch (e) {
+        console.error(e);
+        alert("Failed to save draft due to connection error.");
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = originalText;
+    }
+}
+
+async function submitReworkWithAI() {
+    const id = document.getElementById("edit-draft-id").value;
+    const instruction = document.getElementById("edit-draft-rework-instruction").value.trim();
+    const payload = document.getElementById("edit-draft-payload").value;
+    
+    if (!id || !instruction) {
+        alert("Rework instruction is required.");
+        return;
+    }
+    
+    const reworkBtn = document.getElementById("btn-rework-ai");
+    const originalText = reworkBtn.innerHTML;
+    reworkBtn.disabled = true;
+    reworkBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Reworking...';
+    
+    addSimulatedSystemLog('Athena-Core', `Requesting Claude to rework draft '${id}' with instructions: "${instruction}"`);
+    
+    try {
+        const res = await athenaFetch(`${apiBase}/api/comms/rework`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id, instruction, payload })
+        });
+        const data = await res.json();
+        if (data.success && data.draft) {
+            document.getElementById("edit-draft-payload").value = data.draft.payload;
+            document.getElementById("edit-draft-rework-instruction").value = "";
+            addSimulatedSystemLog('Athena-Core', `Draft reworked successfully by Claude.`);
+        } else {
+            alert("Rework failed: " + (data.error || "unknown error"));
+        }
+    } catch (e) {
+        console.error(e);
+        alert("Rework failed due to connection error.");
+    } finally {
+        reworkBtn.disabled = false;
+        reworkBtn.innerHTML = originalText;
+    }
 }
 
 async function approveDraft(id) {
-    saveDraft(id);
     const payload = draftsData[id]?.payload;
     try {
         const res = await athenaFetch(`${apiBase}/api/comms/approve`, {
@@ -922,5 +1017,166 @@ async function submitNewDraft() {
             generateBtn.disabled = false;
             generateBtn.textContent = originalText;
         }
+    }
+}
+
+// ── SUBMIT DRAFT APPROVAL DIRECTLY FROM MODAL ─────────────────────────
+async function submitDraftApproveFromModal() {
+    const id = document.getElementById("edit-draft-id").value;
+    const payload = document.getElementById("edit-draft-payload").value;
+    
+    if (!id || !payload) return;
+    
+    const approveBtn = document.getElementById("btn-approve-draft-modal");
+    const originalText = approveBtn.innerHTML;
+    approveBtn.disabled = true;
+    approveBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Sending...';
+    
+    try {
+        // Save first
+        const saveRes = await athenaFetch(`${apiBase}/api/comms/draft/save`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id, payload })
+        });
+        const saveData = await saveRes.json();
+        if (!saveData.success) {
+            alert("Failed to save draft edits: " + (saveData.error || "unknown error"));
+            approveBtn.disabled = false;
+            approveBtn.innerHTML = originalText;
+            return;
+        }
+        
+        // Update local cache
+        if (draftsData[id]) draftsData[id].payload = payload;
+        
+        // Approve and send
+        const approveRes = await athenaFetch(`${apiBase}/api/comms/approve`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, payload })
+        });
+        const approveData = await approveRes.json();
+        if (approveData.success) {
+            closeEditDraftModal();
+            loadDrafts();
+            addSimulatedSystemLog('Athena-Core', `HUMAN-IN-THE-LOOP VALIDATED: Sent draft to ${draftsData[id]?.recipient} from edit modal.`);
+        } else {
+            alert("Approval failed: " + (approveData.error || "unknown error"));
+        }
+    } catch (e) {
+        console.error(e);
+        alert("Action failed due to connection error.");
+    } finally {
+        approveBtn.disabled = false;
+        approveBtn.innerHTML = originalText;
+    }
+}
+
+// ── LONG-TERM GOALS MODULE ──────────────────────────────────────────────────
+async function loadGoals() {
+    try {
+        const res = await athenaFetch(`${apiBase}/api/goals`);
+        const goals = await res.json();
+        renderGoals(goals);
+    } catch(e) {
+        console.error("Failed to load goals", e);
+        const list = document.getElementById("long-term-goals-list");
+        if (list) list.innerHTML = '<div class="loading-placeholder">Goals offline.</div>';
+    }
+}
+
+function renderGoals(goals) {
+    const list = document.getElementById("long-term-goals-list");
+    if (!list) return;
+    
+    if (!goals || goals.length === 0) {
+        list.innerHTML = `<div class="loading-placeholder" style="color:var(--text-muted); padding: 10px 0;">No active long-term goals.</div>`;
+        return;
+    }
+    
+    list.innerHTML = goals.map(g => {
+        let dateStr = g.due_date;
+        try {
+            const dateObj = new Date(g.due_date + "T00:00:00");
+            dateStr = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+        } catch(e) {}
+        
+        return `
+            <div class="approval-item" style="border-color: rgba(71, 200, 255, 0.15); margin-bottom: 8px; background: rgba(255,255,255,0.01);">
+                <div class="approval-info" style="flex: 1; padding-right: 10px;">
+                    <span class="approval-target" style="color: var(--text-primary); font-size: 0.82rem; font-weight: 600;">${escapeHtml(g.title)}</span>
+                    <span class="approval-desc" style="color: var(--color-warning); font-size: 0.72rem; font-family: var(--font-mono); margin-top: 2px; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-calendar-days"></i> Due: ${dateStr}</span>
+                    ${g.description ? `<p style="font-size:0.75rem; color:var(--text-secondary); margin-top:6px; line-height:1.4; border-top: 1px solid rgba(255,255,255,0.03); padding-top:4px;">${escapeHtml(g.description)}</p>` : ''}
+                </div>
+                <button class="approve-mini-btn" onclick="completeGoal('${g.id}')" style="background:rgba(60,220,120,0.08); border-color:rgba(60,220,120,0.3); color:#3cdc78; padding: 4px 8px; height: fit-content;" title="Mark Goal Completed">
+                    <i class="fa-solid fa-check"></i> Done
+                </button>
+            </div>
+        `;
+    }).join("");
+}
+
+function openNewGoalModal() {
+    const modal = document.getElementById("new-goal-modal");
+    if (modal) {
+        modal.style.display = "flex";
+        document.getElementById("goal-title-input").value = "";
+        document.getElementById("goal-date-input").value = "";
+        document.getElementById("goal-desc-input").value = "";
+    }
+}
+
+function closeNewGoalModal() {
+    const modal = document.getElementById("new-goal-modal");
+    if (modal) modal.style.display = "none";
+}
+
+async function submitNewGoal() {
+    const title = document.getElementById("goal-title-input").value.trim();
+    const dueDate = document.getElementById("goal-date-input").value;
+    const description = document.getElementById("goal-desc-input").value.trim();
+    
+    if (!title || !dueDate) {
+        alert("Goal title and due date are required.");
+        return;
+    }
+    
+    try {
+        const res = await athenaFetch(`${apiBase}/api/goals`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title, due_date: dueDate, description })
+        });
+        const data = await res.json();
+        if (data.success) {
+            closeNewGoalModal();
+            loadGoals();
+            addSimulatedSystemLog("Memory-Vault", `Offloaded new long-term goal: "${title}"`);
+            fetchLogs();
+        } else {
+            alert("Failed to save goal: " + (data.error || "unknown error"));
+        }
+    } catch(e) {
+        console.error(e);
+        alert("Failed to save goal due to connection error.");
+    }
+}
+
+async function completeGoal(id) {
+    try {
+        const res = await athenaFetch(`${apiBase}/api/goals/complete`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id })
+        });
+        const data = await res.json();
+        if (data.success) {
+            loadGoals();
+            addSimulatedSystemLog("Memory-Vault", `Completed and cleared goal from active registry.`);
+            fetchLogs();
+        }
+    } catch(e) {
+        console.error(e);
     }
 }
