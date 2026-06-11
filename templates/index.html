@@ -371,40 +371,58 @@
                     </div>
 
                     <div class="timeline-module">
-                        <h3><i class="fa-solid fa-clock-rotate-left"></i> Persistent State Blocks</h3>
-                        <div class="timeline">
-                            <div class="timeline-item active" id="state-routine">
-                                <div class="timeline-badge routine"><i class="fa-solid fa-book-open"></i></div>
-                                <div class="timeline-content">
-                                    <div class="time-header">
-                                        <h4>Routine Block <i class="fa-solid fa-pen-to-square edit-state-btn" onclick="openStateModal('routine_block')" style="cursor:pointer; font-size:0.75rem; color:#888; margin-left:6px;" title="Edit Block"></i></h4>
-                                        <span class="time-pill" id="routine-time">07:00 - 09:00 AM</span>
+                        <div class="tab-header" style="display:flex; gap:16px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:8px; margin-bottom:12px;">
+                            <h3 class="tab-btn active" onclick="switchBriefTab('timeline')" id="tab-timeline" style="cursor:pointer; margin-bottom:0; color:#7aaaff; font-size:0.78rem;"><i class="fa-solid fa-clock-rotate-left"></i> Timeline Blocks</h3>
+                            <h3 class="tab-btn" onclick="switchBriefTab('horizon')" id="tab-horizon" style="cursor:pointer; margin-bottom:0; color:var(--text-secondary); font-size:0.78rem;"><i class="fa-solid fa-cloud-sun"></i> On the Horizon</h3>
+                        </div>
+                        
+                        <!-- Timeline tab content -->
+                        <div class="tab-content" id="content-timeline">
+                            <div class="timeline">
+                                <div class="timeline-item active" id="state-routine">
+                                    <div class="timeline-badge routine"><i class="fa-solid fa-book-open"></i></div>
+                                    <div class="timeline-content">
+                                        <div class="time-header">
+                                            <h4>Routine Block <i class="fa-solid fa-pen-to-square edit-state-btn" onclick="openStateModal('routine_block')" style="cursor:pointer; font-size:0.75rem; color:#888; margin-left:6px;" title="Edit Block"></i></h4>
+                                            <span class="time-pill" id="routine-time">07:00 - 09:00 AM</span>
+                                        </div>
+                                        <p class="title" id="routine-title">Denis + Mama Exam Prep</p>
+                                        <span class="status-indicator success" id="routine-status">Active Daily Loop</span>
                                     </div>
-                                    <p class="title" id="routine-title">Denis + Mama Exam Prep</p>
-                                    <span class="status-indicator success" id="routine-status">Active Daily Loop</span>
+                                </div>
+                                <div class="timeline-item" id="state-target">
+                                    <div class="timeline-badge target"><i class="fa-solid fa-graduation-cap"></i></div>
+                                    <div class="timeline-content">
+                                        <div class="time-header">
+                                            <h4>Target Block <i class="fa-solid fa-pen-to-square edit-state-btn" onclick="openStateModal('target_block')" style="cursor:pointer; font-size:0.75rem; color:#888; margin-left:6px;" title="Edit Block"></i></h4>
+                                            <span class="time-pill" id="target-time">—</span>
+                                        </div>
+                                        <p class="title" id="target-title">—</p>
+                                        <span class="status-indicator warning" id="target-status">In Progress</span>
+                                    </div>
+                                </div>
+                                <div class="timeline-item" id="state-anchor">
+                                    <div class="timeline-badge anchor"><i class="fa-solid fa-seedling"></i></div>
+                                    <div class="timeline-content">
+                                        <div class="time-header">
+                                            <h4>Anchor Block <i class="fa-solid fa-pen-to-square edit-state-btn" onclick="openStateModal('anchor_block')" style="cursor:pointer; font-size:0.75rem; color:#888; margin-left:6px;" title="Edit Block"></i></h4>
+                                            <span class="time-pill" id="anchor-time">—</span>
+                                        </div>
+                                        <p class="title" id="anchor-title">—</p>
+                                        <span class="status-indicator info" id="anchor-status">Scheduled</span>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="timeline-item" id="state-target">
-                                <div class="timeline-badge target"><i class="fa-solid fa-graduation-cap"></i></div>
-                                <div class="timeline-content">
-                                    <div class="time-header">
-                                        <h4>Target Block <i class="fa-solid fa-pen-to-square edit-state-btn" onclick="openStateModal('target_block')" style="cursor:pointer; font-size:0.75rem; color:#888; margin-left:6px;" title="Edit Block"></i></h4>
-                                        <span class="time-pill" id="target-time">—</span>
-                                    </div>
-                                    <p class="title" id="target-title">—</p>
-                                    <span class="status-indicator warning" id="target-status">In Progress</span>
-                                </div>
+                        </div>
+                        
+                        <!-- Horizon tab content -->
+                        <div class="tab-content" id="content-horizon" style="display:none;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; margin-top:4px;">
+                                <span style="font-size:0.75rem; color:var(--text-secondary);">Upcoming events & future tasks</span>
+                                <button onclick="openNewHorizonModal()" style="background:rgba(255,107,53,0.12); border:1px solid rgba(255,107,53,0.25); color:var(--color-warning); border-radius:4px; padding:2px 8px; font-family:'Space Mono', monospace; font-size:0.7rem; cursor:pointer;"><i class="fa-solid fa-plus"></i> ADD</button>
                             </div>
-                            <div class="timeline-item" id="state-anchor">
-                                <div class="timeline-badge anchor"><i class="fa-solid fa-seedling"></i></div>
-                                <div class="timeline-content">
-                                    <div class="time-header">
-                                        <h4>Anchor Block <i class="fa-solid fa-pen-to-square edit-state-btn" onclick="openStateModal('anchor_block')" style="cursor:pointer; font-size:0.75rem; color:#888; margin-left:6px;" title="Edit Block"></i></h4>
-                                        <span class="time-pill" id="anchor-time">—</span>
-                                    </div>
-                                    <p class="title" id="anchor-title">—</p>
-                                    <span class="status-indicator info" id="anchor-status">Scheduled</span>
-                                </div>
+                            <div id="horizon-events-list" class="goals-list">
+                                <div class="loading-placeholder">Loading upcoming events...</div>
                             </div>
                         </div>
                     </div>
@@ -638,6 +656,29 @@
             <div style="display:flex; gap:10px; justify-content:flex-end;">
                 <button onclick="closeNewGoalModal()" style="padding:6px 12px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); border-radius:4px; color:#fff; font-family:'Space Mono', monospace; font-size:0.75rem; cursor:pointer;">Cancel</button>
                 <button onclick="submitNewGoal()" style="padding:6px 12px; background:rgba(71,200,255,0.2); border:1px solid #7aaaff; border-radius:4px; color:#7aaaff; font-family:'Space Mono', monospace; font-size:0.75rem; cursor:pointer;">Save Goal</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW HORIZON EVENT MODAL -->
+    <div id="new-horizon-modal" class="lock-screen-overlay" style="display:none; align-items:center; justify-content:center; z-index:9999;">
+        <div class="lock-screen-card" style="max-width:420px; background:rgba(20,20,20,0.95); border:1px solid rgba(255,107,53,0.3); box-shadow:0 0 20px rgba(0,0,0,0.8); border-radius:10px;">
+            <h2 class="lock-screen-title" style="font-family:'Space Mono', monospace; font-size:1.1rem; color:var(--color-warning); margin-bottom:15px; text-align:center;">Add Event On The Horizon</h2>
+            <div class="modal-form-group" style="margin-bottom:12px; text-align:left;">
+                <label style="font-family:'Space Mono', monospace; font-size:0.75rem; color:#aaa; display:block; margin-bottom:4px;">Event / Deadline Title</label>
+                <input type="text" id="horizon-title-input" placeholder="e.g. Belgrade travels seed round prep" style="width:100%; padding:8px; background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.15); border-radius:4px; color:#fff; font-size:0.85rem; box-sizing:border-box;">
+            </div>
+            <div class="modal-form-group" style="margin-bottom:12px; text-align:left;">
+                <label style="font-family:'Space Mono', monospace; font-size:0.75rem; color:#aaa; display:block; margin-bottom:4px;">Date</label>
+                <input type="date" id="horizon-date-input" style="width:100%; padding:8px; background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.15); border-radius:4px; color:#fff; font-size:0.85rem; box-sizing:border-box;">
+            </div>
+            <div class="modal-form-group" style="margin-bottom:18px; text-align:left;">
+                <label style="font-family:'Space Mono', monospace; font-size:0.75rem; color:#aaa; display:block; margin-bottom:4px;">Action Required by Athena</label>
+                <textarea id="horizon-action-input" placeholder="What should Athena take care of? (e.g. draft outreach email, send brief flag...)" style="width:100%; min-height:60px; resize:vertical; padding:8px; background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.15); border-radius:4px; color:#fff; font-size:0.85rem; font-family:inherit; box-sizing:border-box;"></textarea>
+            </div>
+            <div style="display:flex; gap:10px; justify-content:flex-end;">
+                <button onclick="closeNewHorizonModal()" style="padding:6px 12px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); border-radius:4px; color:#fff; font-family:'Space Mono', monospace; font-size:0.75rem; cursor:pointer;">Cancel</button>
+                <button onclick="submitNewHorizon()" style="padding:6px 12px; background:rgba(255,107,53,0.2); border:1px solid var(--color-warning); border-radius:4px; color:var(--color-warning); font-family:'Space Mono', monospace; font-size:0.75rem; cursor:pointer;">Save Event</button>
             </div>
         </div>
     </div>

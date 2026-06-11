@@ -42,6 +42,7 @@ function startDashboard() {
     loadPriorities();
     loadStates();
     loadGoals(); // Load long-term goals
+    loadHorizon(); // Load horizon events
     fetchTelemetryData();
     fetchLogs();
     
@@ -51,6 +52,7 @@ function startDashboard() {
     setInterval(fetchLogs, 5000);
     setInterval(loadStates, 10000); // Poll states every 10s
     setInterval(loadGoals, 30000); // Poll goals every 30s
+    setInterval(loadHorizon, 30000); // Poll horizon events every 30s
     setInterval(loadPriorities, 5 * 60 * 1000); // 5 min
 }
 
@@ -519,12 +521,25 @@ function editDraft(id) {
     document.getElementById("edit-draft-rework-instruction").value = "";
     
     modal.style.display = "flex";
+    modal.offsetHeight; // Force reflow
+    modal.classList.add("visible");
     addSimulatedSystemLog('Comms-Draft-Engine', `Draft for ${draft.recipient} opened in edit modal.`);
 }
 
-function closeEditDraftModal() {
+function closeEditDraftDraftModal() {
     const modal = document.getElementById("edit-draft-modal");
-    if (modal) modal.style.display = "none";
+    if (modal) {
+        modal.classList.remove("visible");
+        setTimeout(() => {
+            if (!modal.classList.contains("visible")) {
+                modal.style.display = "none";
+            }
+        }, 500);
+    }
+}
+
+function closeEditDraftModal() {
+    closeEditDraftDraftModal();
 }
 
 async function submitDraftSave() {
@@ -926,11 +941,20 @@ async function openStateModal(blockKey) {
     document.getElementById("edit-state-status").value = statusEl ? statusEl.textContent : "";
     
     modal.style.display = "flex";
+    modal.offsetHeight; // Force reflow
+    modal.classList.add("visible");
 }
 
 function closeStateModal() {
     const modal = document.getElementById("state-edit-modal");
-    if (modal) modal.style.display = "none";
+    if (modal) {
+        modal.classList.remove("visible");
+        setTimeout(() => {
+            if (!modal.classList.contains("visible")) {
+                modal.style.display = "none";
+            }
+        }, 500);
+    }
 }
 
 async function submitStateEdit() {
@@ -967,6 +991,8 @@ function openNewDraftModal() {
     const modal = document.getElementById("new-draft-modal");
     if (modal) {
         modal.style.display = "flex";
+        modal.offsetHeight; // Force reflow
+        modal.classList.add("visible");
         document.getElementById("draft-recipient-input").value = "";
         document.getElementById("draft-prompt-input").value = "";
     }
@@ -974,7 +1000,14 @@ function openNewDraftModal() {
 
 function closeNewDraftModal() {
     const modal = document.getElementById("new-draft-modal");
-    if (modal) modal.style.display = "none";
+    if (modal) {
+        modal.classList.remove("visible");
+        setTimeout(() => {
+            if (!modal.classList.contains("visible")) {
+                modal.style.display = "none";
+            }
+        }, 500);
+    }
 }
 
 async function submitNewDraft() {
@@ -1121,6 +1154,8 @@ function openNewGoalModal() {
     const modal = document.getElementById("new-goal-modal");
     if (modal) {
         modal.style.display = "flex";
+        modal.offsetHeight; // Force reflow
+        modal.classList.add("visible");
         document.getElementById("goal-title-input").value = "";
         document.getElementById("goal-date-input").value = "";
         document.getElementById("goal-desc-input").value = "";
@@ -1129,7 +1164,14 @@ function openNewGoalModal() {
 
 function closeNewGoalModal() {
     const modal = document.getElementById("new-goal-modal");
-    if (modal) modal.style.display = "none";
+    if (modal) {
+        modal.classList.remove("visible");
+        setTimeout(() => {
+            if (!modal.classList.contains("visible")) {
+                modal.style.display = "none";
+            }
+        }, 500);
+    }
 }
 
 async function submitNewGoal() {
@@ -1174,6 +1216,152 @@ async function completeGoal(id) {
         if (data.success) {
             loadGoals();
             addSimulatedSystemLog("Memory-Vault", `Completed and cleared goal from active registry.`);
+            fetchLogs();
+        }
+    } catch(e) {
+        console.error(e);
+    }
+}
+
+// ── BRIEF ORCHESTRATOR TABS ──────────────────────────────────────────────────
+function switchBriefTab(tabName) {
+    const timelineTab = document.getElementById("tab-timeline");
+    const horizonTab = document.getElementById("tab-horizon");
+    const timelineContent = document.getElementById("content-timeline");
+    const horizonContent = document.getElementById("content-horizon");
+    
+    if (!timelineTab || !horizonTab) return;
+    
+    if (tabName === "timeline") {
+        timelineTab.classList.add("active");
+        timelineTab.style.color = "#7aaaff";
+        horizonTab.classList.remove("active");
+        horizonTab.style.color = "var(--text-secondary)";
+        
+        timelineContent.style.display = "block";
+        horizonContent.style.display = "none";
+    } else {
+        horizonTab.classList.add("active");
+        horizonTab.style.color = "var(--color-warning)";
+        timelineTab.classList.remove("active");
+        timelineTab.style.color = "var(--text-secondary)";
+        
+        timelineContent.style.display = "none";
+        horizonContent.style.display = "block";
+        loadHorizon();
+    }
+}
+
+// ── ON THE HORIZON MODULE ────────────────────────────────────────────────────
+async function loadHorizon() {
+    try {
+        const res = await athenaFetch(`${apiBase}/api/horizon`);
+        const events = await res.json();
+        renderHorizon(events);
+    } catch(e) {
+        console.error("Failed to load horizon events", e);
+        const list = document.getElementById("horizon-events-list");
+        if (list) list.innerHTML = '<div class="loading-placeholder">Horizon events offline.</div>';
+    }
+}
+
+function renderHorizon(events) {
+    const list = document.getElementById("horizon-events-list");
+    if (!list) return;
+    
+    if (!events || events.length === 0) {
+        list.innerHTML = `<div class="loading-placeholder" style="color:var(--text-muted); padding: 10px 0;">No upcoming events on the horizon.</div>`;
+        return;
+    }
+    
+    list.innerHTML = events.map(e => {
+        let dateStr = e.event_date;
+        try {
+            const dateObj = new Date(e.event_date + "T00:00:00");
+            dateStr = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+        } catch(ex) {}
+        
+        return `
+            <div class="approval-item" style="border-color: rgba(255, 107, 53, 0.2); margin-bottom: 8px; background: rgba(255,255,255,0.01);">
+                <div class="approval-info" style="flex: 1; padding-right: 10px;">
+                    <span class="approval-target" style="color: var(--text-primary); font-size: 0.82rem; font-weight: 600;">${escapeHtml(e.title)}</span>
+                    <span class="approval-desc" style="color: var(--color-warning); font-size: 0.72rem; font-family: var(--font-mono); margin-top: 2px; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-calendar-day"></i> Event Date: ${dateStr}</span>
+                    ${e.action_required ? `<p style="font-size:0.75rem; color:var(--text-secondary); margin-top:6px; line-height:1.4; border-top: 1px solid rgba(255,255,255,0.03); padding-top:4px;"><strong>Athena Action:</strong> ${escapeHtml(e.action_required)}</p>` : ''}
+                </div>
+                <button class="approve-mini-btn" onclick="completeHorizonEvent('${e.id}')" style="background:rgba(60,220,120,0.08); border-color:rgba(60,220,120,0.3); color:#3cdc78; padding: 4px 8px; height: fit-content;" title="Archive Event">
+                    <i class="fa-solid fa-check"></i> Clear
+                </button>
+            </div>
+        `;
+    }).join("");
+}
+
+function openNewHorizonModal() {
+    const modal = document.getElementById("new-horizon-modal");
+    if (modal) {
+        modal.style.display = "flex";
+        modal.offsetHeight; // Force reflow
+        modal.classList.add("visible");
+        document.getElementById("horizon-title-input").value = "";
+        document.getElementById("horizon-date-input").value = "";
+        document.getElementById("horizon-action-input").value = "";
+    }
+}
+
+function closeNewHorizonModal() {
+    const modal = document.getElementById("new-horizon-modal");
+    if (modal) {
+        modal.classList.remove("visible");
+        setTimeout(() => {
+            if (!modal.classList.contains("visible")) {
+                modal.style.display = "none";
+            }
+        }, 500);
+    }
+}
+
+async function submitNewHorizon() {
+    const title = document.getElementById("horizon-title-input").value.trim();
+    const eventDate = document.getElementById("horizon-date-input").value;
+    const actionRequired = document.getElementById("horizon-action-input").value.trim();
+    
+    if (!title || !eventDate) {
+        alert("Event title and event date are required.");
+        return;
+    }
+    
+    try {
+        const res = await athenaFetch(`${apiBase}/api/horizon`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title, event_date: eventDate, action_required: actionRequired })
+        });
+        const data = await res.json();
+        if (data.success) {
+            closeNewHorizonModal();
+            loadHorizon();
+            addSimulatedSystemLog("Memory-Vault", `Added event on the horizon: "${title}"`);
+            fetchLogs();
+        } else {
+            alert("Failed to save event: " + (data.error || "unknown error"));
+        }
+    } catch(e) {
+        console.error(e);
+        alert("Failed to save event due to connection error.");
+    }
+}
+
+async function completeHorizonEvent(id) {
+    try {
+        const res = await athenaFetch(`${apiBase}/api/horizon/complete`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id })
+        });
+        const data = await res.json();
+        if (data.success) {
+            loadHorizon();
+            addSimulatedSystemLog("Memory-Vault", `Cleared horizon event from active monitoring list.`);
             fetchLogs();
         }
     } catch(e) {

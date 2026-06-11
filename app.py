@@ -248,38 +248,7 @@ orchestrator_states = {
     }
 }
 
-comms_drafts = {
-    "gmail": {
-        "id": "gmail",
-        "channel": "Gmail (PCC Response)",
-        "recipient": "Nathan",
-        "status": "Pending Approval",
-        "payload": "Subject: PCC Milestone Review & Next Steps\n\nNathan,\n\nCongratulations on reaching the 18-month PCC milestone! It's incredible to see the progress. Let's schedule a review next week to align on the next phases.\n\nBest,\nNatasha",
-        "integration": "Integrated 18-month PCC milestone data from OAUTH_CLIENT_SECRET context.",
-        "broadcast_type": "Gmail API (gmail.context.create_draft)",
-        "repeat_tomorrow": False
-    },
-    "instagram": {
-        "id": "instagram",
-        "channel": "Instagram (Outreach)",
-        "recipient": "Jenny (Don't Look Projects)",
-        "status": "Pending Approval",
-        "payload": "Hey Jenny! I love what you're doing with Don't Look Projects. The aesthetic is incredibly aligned. Would love to sync up about a collaboration next week if you're open!",
-        "integration": "Local browser automation buffer payload (Puppeteer/Playwright headless buffer).",
-        "broadcast_type": "Browser Automation Buffer",
-        "repeat_tomorrow": False
-    },
-    "whatsapp": {
-        "id": "whatsapp",
-        "channel": "WhatsApp (Metrics)",
-        "recipient": "Denis",
-        "status": "Pending Approval",
-        "payload": "Denis, here are the Belgrade timezone automated metrics:\n- Daily Active Sessions: 142\n- Sync Status: SUCCESS\n- Response Latency: 14ms",
-        "integration": "Belgrade timezone trigger (+9 hrs). Formulated Twilio WhatsApp transaction routing payload.",
-        "broadcast_type": "Twilio WhatsApp API Gateway",
-        "repeat_tomorrow": False
-    }
-}
+comms_drafts = {}
 
 active_memory_goals = [
     {
@@ -294,6 +263,23 @@ active_memory_goals = [
         "title": "TFAP@CAA Paper Proposal submission",
         "description": "Prepare abstract and submit proposal.",
         "due_date": "2026-07-15",
+        "completed": False
+    }
+]
+
+active_horizon_events = [
+    {
+        "id": "event_1",
+        "title": "September Solo Show: Technosomatic Cyberfeminism 2.0 at ARC Gallery",
+        "action_required": "Coordinating seed funding and ARC show artworks.",
+        "event_date": "2026-09-01",
+        "completed": False
+    },
+    {
+        "id": "event_2",
+        "title": "Aleksandar Lazarevic cybersecurity review check-in",
+        "action_required": "Schedule cybersecurity audit of Athena platform.",
+        "event_date": "2026-06-25",
         "completed": False
     }
 ]
@@ -387,12 +373,34 @@ def get_realtime_context() -> str:
     else:
         goals_str = "No active long-term goals."
         
+    # Fetch active upcoming events on the horizon
+    horizon_list = []
+    if supabase:
+        try:
+            res_hor = supabase.table("on_the_horizon").select("*").eq("completed", False).order("event_date", desc=False).execute()
+            if res_hor.data:
+                horizon_list = res_hor.data
+        except Exception as e:
+            print(f"Error reading horizon events for context: {e}")
+            
+    if not horizon_list:
+        horizon_list = [h for h in active_horizon_events if not h["completed"]]
+        horizon_list.sort(key=lambda x: x["event_date"])
+        
+    if horizon_list:
+        horizon_str = "\n".join([f"- {h['title']} (Date: {h['event_date']}){': ' + h['action_required'] if h.get('action_required') else ''}" for h in horizon_list])
+    else:
+        horizon_str = "No upcoming events on the horizon."
+        
     context = f"""Current Times:
 - Local Time (LA): {local_time_str} ({local_date_str})
 - Belgrade Time: {belgrade_time_str} ({belgrade_date_str})
 
 Active Long-Term Goals (in permanent memory):
 {goals_str}
+
+Upcoming Events on the Horizon (Athena is monitoring):
+{horizon_str}
 
 Active Persistent State Blocks:
 {states_str}
@@ -633,6 +641,86 @@ DAILY BRIEF DATA:
         prompt += f"\n\n{feedback_context}"
         
     claude_synthesis = ask_claude(prompt, context=brief_time_context)
+    
+    # Generate draft recommendations dynamically using Claude based on the daily brief context
+    try:
+        draft_prompt = f"""
+        Analyze the daily briefing and raw Google calendar/email data:
+        
+        DAILY BRIEF:
+        {gemini_brief}
+        
+        ATHENA SYNTHESIS:
+        {claude_synthesis}
+        
+        Identify any communication tasks Natasha needs to perform (e.g. congratulations to Nathan for reaching the 18-month PCC milestone, reaching out to Jenny at Don't Look Projects, follow up with client prospects).
+        For each task, write a draft in Natasha's voice (intelligent, warm, direct, no filler).
+        
+        Return ONLY a valid JSON array of draft objects. No markdown formatting (no ```json). No preamble or explanation.
+        Each object MUST have:
+        - "recipient": the name of the recipient (e.g., "Nathan" or "Jenny")
+        - "channel": the platform channel (e.g. "Gmail (PCC Response)", "Instagram (Outreach)", "WhatsApp (Metrics)")
+        - "payload": the message text drafted
+        - "integration": a short phrase describing the context (e.g. "Integrated 18-month PCC milestone data.")
+        - "broadcast_type": "Gmail API (gmail.context.create_draft)" or "Browser Automation Buffer" or "Twilio WhatsApp API Gateway"
+        """
+        
+        claude_draft_res = anthropic_client.messages.create(
+            model="claude-opus-4-5",
+            max_tokens=1024,
+            system="You are Athena, Natasha's sovereign assistant. Return only valid JSON arrays of communications drafts.",
+            messages=[{"role": "user", "content": draft_prompt}]
+        )
+        drafts_json = claude_draft_res.content[0].text.strip()
+        drafts_json = drafts_json.replace("```json", "").replace("```", "").strip()
+        new_drafts = json.loads(drafts_json)
+        
+        if supabase:
+            try:
+                # Delete current pending drafts
+                supabase.table("drafts").delete().eq("status", "Pending Approval").execute()
+                
+                # Insert new drafts
+                for idx, nd in enumerate(new_drafts):
+                    draft_id = f"draft_brief_{int(time.time())}_{idx}"
+                    supabase.table("drafts").insert({
+                        "id": draft_id,
+                        "recipient": nd.get("recipient"),
+                        "channel": nd.get("channel"),
+                        "status": "Pending Approval",
+                        "payload": nd.get("payload"),
+                        "integration": nd.get("integration"),
+                        "broadcast_type": nd.get("broadcast_type"),
+                        "repeat_tomorrow": False
+                    }).execute()
+            except Exception as e:
+                print(f"Error saving generated drafts to Supabase: {e}")
+        
+        # Update local memory
+        for k in list(comms_drafts.keys()):
+            if comms_drafts[k]["status"] == "Pending Approval":
+                comms_drafts.pop(k)
+                
+        for idx, nd in enumerate(new_drafts):
+            draft_id = f"draft_brief_{int(time.time())}_{idx}"
+            comms_drafts[draft_id] = {
+                "id": draft_id,
+                "recipient": nd.get("recipient"),
+                "channel": nd.get("channel"),
+                "status": "Pending Approval",
+                "payload": nd.get("payload"),
+                "integration": nd.get("integration"),
+                "broadcast_type": nd.get("broadcast_type"),
+                "repeat_tomorrow": False
+            }
+            
+        system_logs.append({
+            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "source": "Brief-Orchestrator",
+            "message": f"Dynamically compiled {len(new_drafts)} drafts from daily briefing context."
+        })
+    except Exception as e:
+        print(f"Error generating drafts from brief: {e}")
     
     # Store to Supabase
     if supabase:
@@ -1430,6 +1518,82 @@ def complete_goal_api():
                 "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
                 "source": "Memory-Vault",
                 "message": f"Completed long-term goal: '{g['title']}'."
+            })
+            break
+            
+    return jsonify({"success": True})
+
+# ── Horizon Events Routes ─────────────────────────────────────────────────────────────
+@app.route("/api/horizon", methods=["GET"])
+def get_horizon():
+    if supabase:
+        try:
+            res = supabase.table("on_the_horizon").select("*").eq("completed", False).order("event_date", desc=False).execute()
+            return jsonify(res.data)
+        except Exception as e:
+            print(f"Error querying on_the_horizon: {e}")
+            
+    # Return sorted memory events
+    active = [e for e in active_horizon_events if not e["completed"]]
+    active.sort(key=lambda x: x["event_date"])
+    return jsonify(active)
+
+@app.route("/api/horizon", methods=["POST"])
+def create_horizon_event():
+    data = request.json or {}
+    title = data.get("title")
+    action_required = data.get("action_required", "")
+    event_date = data.get("event_date")
+    
+    if not title or not event_date:
+        return jsonify({"success": False, "error": "Missing title or event_date"}), 400
+        
+    event_id = f"event_{int(time.time())}"
+    event = {
+        "id": event_id,
+        "title": title,
+        "action_required": action_required,
+        "event_date": event_date,
+        "completed": False
+    }
+    
+    if supabase:
+        try:
+            supabase.table("on_the_horizon").insert(event).execute()
+        except Exception as e:
+            print(f"Error saving event to Supabase: {e}")
+            
+    active_horizon_events.append(event)
+    
+    system_logs.append({
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "source": "Memory-Vault",
+        "message": f"Added upcoming event: '{title}' (date {event_date})."
+    })
+    
+    return jsonify({"success": True, "event": event})
+
+@app.route("/api/horizon/complete", methods=["POST"])
+def complete_horizon_event_api():
+    data = request.json or {}
+    event_id = data.get("id")
+    
+    if not event_id:
+        return jsonify({"success": False, "error": "Missing event ID"}), 400
+        
+    if supabase:
+        try:
+            supabase.table("on_the_horizon").update({"completed": True}).eq("id", event_id).execute()
+        except Exception as e:
+            print(f"Error updating event: {e}")
+            
+    for e in active_horizon_events:
+        if e["id"] == event_id:
+            e["completed"] = True
+            system_logs.append({
+                "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "source": "Memory-Vault",
+                "message": f"Completed and archived horizon event: '{e['title']}'."
             })
             break
             
