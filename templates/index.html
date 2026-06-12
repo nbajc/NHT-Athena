@@ -219,6 +219,318 @@
             margin-bottom: 6px;
             display: block;
         }
+
+        /* ── TWO-COLUMN SPLIT LAYOUT OVERRIDES ───────────────── */
+        .app-container {
+            display: grid !important;
+            grid-template-columns: 380px 1fr !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            overflow: hidden !important;
+            max-width: none !important;
+            padding: 0 !important;
+            background: #0A0A0A !important;
+        }
+
+        .hero-sidebar {
+            background: #07070d;
+            border-right: 1px solid rgba(255,255,255,0.07);
+            padding: 32px 24px;
+            height: 100vh;
+            position: sticky;
+            top: 0;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            box-shadow: inset -1px 0 0 rgba(255,255,255,0.03), inset 0 0 80px rgba(255, 45, 120, 0.02);
+        }
+
+        .hero-sidebar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .hero-sidebar::-webkit-scrollbar-thumb {
+            background: rgba(255, 45, 120, 0.15);
+            border-radius: 2px;
+        }
+
+        .hero-logo-container {
+            text-align: center;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .hero-logo {
+            max-width: 130px;
+            height: auto;
+            object-fit: contain;
+            margin-bottom: 16px;
+            animation: logo-breathe 6s ease-in-out infinite;
+            transition: transform 0.3s ease, filter 0.3s ease;
+        }
+        .hero-logo:hover {
+            transform: scale(1.05);
+            filter: drop-shadow(0 0 20px rgba(255, 45, 120, 0.35));
+        }
+
+        @keyframes logo-breathe {
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 10px rgba(255, 45, 120, 0.1)); }
+            50% { transform: scale(1.03); filter: drop-shadow(0 0 18px rgba(255, 45, 120, 0.25)); }
+        }
+
+        .hero-brand {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 28px;
+            letter-spacing: 0.12em;
+            background: linear-gradient(90deg, #FF2D78 0%, #FF6B1A 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 4px;
+        }
+
+        .hero-tagline {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 0.15em;
+            color: rgba(240,238,232,0.3);
+            text-transform: uppercase;
+        }
+
+        .manifest-container {
+            padding-top: 10px;
+        }
+
+        .manifest-content {
+            color: rgba(240,238,232,0.55);
+        }
+
+        .manifest-header {
+            margin-bottom: 20px;
+        }
+
+        .manifest-tag {
+            font-family: 'Space Mono', monospace;
+            font-size: 9px;
+            color: #FF2D78;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .manifest-title {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 24px;
+            letter-spacing: 0.06em;
+            color: #F0EEE8;
+            margin-bottom: 6px;
+            line-height: 1.1;
+        }
+
+        .manifest-subtitle {
+            font-family: 'Space Mono', monospace;
+            font-size: 10.5px;
+            color: rgba(240,238,232,0.55);
+            letter-spacing: 0.04em;
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+
+        .manifest-version {
+            font-family: 'Space Mono', monospace;
+            font-size: 9.5px;
+            color: rgba(240,238,232,0.3);
+        }
+
+        .manifest-hr {
+            border: 0;
+            height: 1px;
+            background: rgba(255,255,255,0.07);
+            margin: 18px 0;
+        }
+
+        .manifest-quote {
+            font-family: 'Cormorant Garamond', serif;
+            font-style: italic;
+            font-size: 14.5px;
+            color: rgba(240,238,232,0.55);
+            line-height: 1.6;
+            padding-left: 14px;
+            border-left: 2px solid #FF2D78;
+            margin: 16px 0;
+        }
+
+        .manifest-h3 {
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            color: #F0EEE8;
+            letter-spacing: 0.12em;
+            margin-top: 24px;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            padding-bottom: 4px;
+        }
+
+        .manifest-h4 {
+            font-family: 'Space Mono', monospace;
+            font-size: 9.5px;
+            color: #FF8C42;
+            letter-spacing: 0.08em;
+            margin-top: 16px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .manifest-p {
+            font-size: 12px;
+            line-height: 1.65;
+            color: rgba(240,238,232,0.55);
+            margin-bottom: 12px;
+        }
+
+        .manifest-meta-box {
+            background: rgba(255, 107, 26, 0.03);
+            border-left: 2px solid #FF6B1A;
+            padding: 12px;
+            border-radius: 0 6px 6px 0;
+            font-size: 11px;
+            line-height: 1.7;
+            margin: 14px 0;
+            color: rgba(240,238,232,0.55);
+        }
+        .manifest-meta-box strong {
+            color: #F0EEE8;
+        }
+        .manifest-meta-box code {
+            font-family: 'Space Mono', monospace;
+            color: #FF2D78;
+            background: rgba(255, 45, 120, 0.06);
+            padding: 1px 4px;
+            border-radius: 3px;
+            font-size: 10.5px;
+        }
+
+        .manifest-ascii {
+            background: #07070b;
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 6px;
+            padding: 12px;
+            overflow-x: auto;
+            margin: 14px 0;
+        }
+        .manifest-ascii code {
+            font-family: 'Space Mono', monospace;
+            font-size: 9.5px;
+            color: rgba(240,238,232,0.55);
+            line-height: 1.3;
+            white-space: pre;
+            display: block;
+        }
+
+        .manifest-code {
+            background: #07070b;
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 6px;
+            padding: 12px;
+            overflow-x: auto;
+            margin: 14px 0;
+        }
+        .manifest-code code {
+            font-family: 'Space Mono', monospace;
+            font-size: 10.5px;
+            color: rgba(240,238,232,0.55);
+            line-height: 1.5;
+            white-space: pre;
+            display: block;
+        }
+
+        .manifest-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0;
+            font-size: 10.5px;
+        }
+        .manifest-table th, .manifest-table td {
+            border: 1px solid rgba(255,255,255,0.07);
+            padding: 8px;
+            text-align: left;
+        }
+        .manifest-table th {
+            background: #18181f;
+            font-family: 'Space Mono', monospace;
+            color: #FF2D78;
+            font-weight: normal;
+            letter-spacing: 0.05em;
+        }
+
+        .manifest-footer {
+            font-family: 'Space Mono', monospace;
+            font-size: 9px;
+            color: rgba(240,238,232,0.3);
+            line-height: 1.6;
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255,255,255,0.07);
+        }
+
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow-y: auto;
+            padding: 0;
+        }
+
+        .app-header {
+            margin-bottom: 0 !important;
+            border-bottom: 1px solid rgba(255,255,255,0.07) !important;
+            background: #111118 !important;
+            padding: 10px 24px !important;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .dashboard-grid {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px !important;
+        }
+
+        /* Responsive collapse query */
+        @media (max-width: 1100px) {
+            .app-container {
+                grid-template-columns: 1fr !important;
+                height: auto !important;
+                overflow-y: auto !important;
+            }
+            .hero-sidebar {
+                height: auto !important;
+                position: relative !important;
+                border-right: none !important;
+                border-bottom: 1px solid rgba(255,255,255,0.07) !important;
+            }
+            .main-content {
+                height: auto !important;
+                overflow-y: visible !important;
+            }
+        }
+
+        .logo-reduced {
+            height: 22px;
+            width: auto;
+            object-fit: contain;
+            opacity: 0.8;
+            transition: opacity 0.2s, filter 0.2s;
+        }
+        .logo-reduced:hover {
+            opacity: 1;
+            filter: brightness(1.05);
+        }
     </style>
 </head>
 <body>
@@ -245,305 +557,843 @@
     <div class="glass-bg-glow"></div>
 
     <div class="app-container">
-        <!-- HEADER -->
-        <header class="app-header">
-            <div class="brand">
-                <img src="/static/intricateNHT.png" alt="Nexus Hestia Technologies Logo" class="brand-logo">
-                <div class="brand-text">
-                    <h1>ATHENA</h1>
-                    <span class="version-tag">v2.2</span>
+        
+        <!-- LEFT HERO SIDEBAR -->
+        <aside class="hero-sidebar">
+            <div class="hero-logo-container">
+                <img src="/static/intricateNHT.png" alt="Nexus Hestia Technologies Logo" class="hero-logo">
+                <h2 class="hero-brand">NEXUS HESTIA</h2>
+                <div class="hero-tagline">Athena Platform</div>
+            </div>
+            
+            <div class="manifest-container">
+                <div class="manifest-content">
+                    <div class="manifest-header">
+                        <div class="manifest-tag">SOVEREIGN SYSTEM MANIFEST</div>
+                        <h1 class="manifest-title">ATHENA — ANTIGRAVITY MANIFEST</h1>
+                        <h2 class="manifest-subtitle">Nexus Hestia Technologies · Sovereign Executive AI Platform</h2>
+                        <div class="manifest-version">Version 1.0 · June 2026 · Natasha Bajc</div>
+                    </div>
+                    
+                    <hr class="manifest-hr">
+                    
+                    <blockquote class="manifest-quote">
+                        The body already knows what the system is doing to it before the mind catches up.<br>
+                        Athena is the instrument that closes the loop.
+                    </blockquote>
+                    
+                    <hr class="manifest-hr">
+                    
+                    <h3 class="manifest-h3">0. WHAT THIS DOCUMENT IS</h3>
+                    <p class="manifest-p">This manifest is the complete specification for the Athena platform: what it is, how it is built, where it lives, what it remembers, and what it does autonomously without being asked. It is the authoritative reference for all engineering, design, and intelligence decisions. Nothing is hardcoded. Everything is configurable. The system adapts to its operator.</p>
+                    
+                    <div class="manifest-meta-box">
+                        <strong>Operator:</strong> Natasha Bajc · CEO, Nexus Hestia Technologies<br>
+                        <strong>Frontend:</strong> <code>athena.nexushestia.com</code> (Bluehost, static HTML/JS)<br>
+                        <strong>Backend API:</strong> <code>api.athena.nexushestia.com</code> (Railway, Python Flask)<br>
+                        <strong>Long-term memory:</strong> Supabase (PostgreSQL + pgvector)<br>
+                        <strong>Intelligence layer:</strong> Anthropic Claude API + Google Gemini API<br>
+                        <strong>Repository:</strong> <code>github.com/nbajc/NHT-Athena</code><br>
+                        <strong>Access:</strong> Email + password protected (session-based, no OAuth dependency)
+                    </div>
+
+                    <hr class="manifest-hr">
+                    
+                    <h3 class="manifest-h3">1. ARCHITECTURE OVERVIEW</h3>
+                    <pre class="manifest-ascii"><code>┌─────────────────────────────────────────────────────────────────┐
+│  FRONTEND  ·  athena.nexushestia.com  ·  Bluehost               │
+│  Static HTML/CSS/JS — no framework dependency                    │
+│  Auth: session token stored in httpOnly cookie                   │
+│  Fonts: Bebas Neue / Space Mono / DM Sans / Cormorant Garamond   │
+│  Logos: intricateNHT.png (header) · reducedNHT.png (footer)      │
+└────────────────────────┬────────────────────────────────────────┘
+                         │ HTTPS
+┌────────────────────────▼────────────────────────────────────────┐
+│  BACKEND API  ·  api.athena.nexushestia.com  ·  Railway          │
+│  Python Flask · Gunicorn · CORS-locked to athena.nexushestia.com │
+│  Environment: all secrets in Railway ENV vars, never in code     │
+│  Routes: /auth /chat /brief /daily /tasks /comms /horizon        │
+│          /side-tasks /memory /gemini /claude                     │
+└──────┬──────────────────┬──────────────────┬────────────────────┘
+       │                  │                  │
+┌──────▼──────┐  ┌────────▼───────┐  ┌──────▼──────────────────┐
+│  SUPABASE   │  │  CLAUDE API    │  │  GEMINI API              │
+│  PostgreSQL │  │  Anthropic     │  │  Google                  │
+│  pgvector   │  │  claude-sonnet │  │  gemini-2.0-flash        │
+│  Long-term  │  │  Strategic     │  │  Daily brief +           │
+│  memory     │  │  reasoning     │  │  email parsing +         │
+│  + context  │  │  + drafting    │  │  pattern recognition     │
+└─────────────┘  └────────────────┘  └──────────────────────────┘</code></pre>
+
+                    <hr class="manifest-hr">
+
+                    <h3 class="manifest-h3">2. AUTHENTICATION</h3>
+                    <p class="manifest-p"><strong>Method:</strong> Email + password, session-based<br>
+                    <strong>No OAuth, no third-party SSO</strong> — sovereign by design</p>
+                    
+                    <h4 class="manifest-h4">Implementation</h4>
+                    <pre class="manifest-code"><code>POST /auth/login
+  body: { email, password }
+  → validates against USERS table in Supabase
+  → issues signed JWT stored as httpOnly cookie (7-day expiry)
+  → returns { user_id, display_name }
+
+POST /auth/logout
+  → clears session cookie
+
+GET /auth/verify
+  → checks cookie validity on every protected route</code></pre>
+
+                    <h4 class="manifest-h4">Supabase: USERS table</h4>
+                    <pre class="manifest-code"><code>CREATE TABLE users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,  -- bcrypt
+  display_name TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  last_login TIMESTAMPTZ
+);</code></pre>
+
+                    <p class="manifest-p"><strong>Environment variables (Railway, never in code):</strong></p>
+                    <pre class="manifest-code"><code>SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+JWT_SECRET=
+ANTHROPIC_API_KEY=
+GEMINI_API_KEY=
+GMAIL_CREDENTIALS_JSON=   (for email side-task agent)
+FLASK_SECRET_KEY=</code></pre>
+
+                    <hr class="manifest-hr">
+
+                    <h3 class="manifest-h3">3. SUPABASE MEMORY ARCHITECTURE</h3>
+                    <p class="manifest-p">Athena remembers everything. Memory is not a session — it is a persistent, queryable, semantic record of the operator's context, decisions, and state.</p>
+                    
+                    <h4 class="manifest-h4">Tables</h4>
+                    <pre class="manifest-code"><code>-- Conversation history: every message, forever
+CREATE TABLE messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id),
+  role TEXT CHECK (role IN ('user','assistant','system')),
+  content TEXT NOT NULL,
+  model TEXT,               -- 'claude' | 'gemini'
+  panel TEXT,               -- 'core' | 'brief' | 'comms' | 'today'
+  embedding VECTOR(1536),   -- pgvector semantic search
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Long-horizon goals
+CREATE TABLE horizon_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id),
+  target_date DATE,
+  title TEXT NOT NULL,
+  description TEXT,
+  urgency TEXT CHECK (urgency IN ('critical','high','medium','low')),
+  status TEXT DEFAULT 'active',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Brief items (active strategic tasks)
+CREATE TABLE brief_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id),
+  content TEXT NOT NULL,
+  urgency TEXT,
+  status TEXT DEFAULT 'active',
+  sort_order INT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Today's timeline blocks
+CREATE TABLE timeline_blocks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id),
+  block_date DATE DEFAULT CURRENT_DATE,
+  time_slot TEXT,
+  title TEXT NOT NULL,
+  notes TEXT,
+  completed BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Side tasks: autonomous backend agents
+CREATE TABLE side_tasks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id),
+  task_key TEXT UNIQUE,       -- e.g. 'email_unsubscribe_sweep'
+  display_name TEXT,
+  description TEXT,
+  status TEXT DEFAULT 'idle', -- idle | running | paused | done | error
+  last_run TIMESTAMPTZ,
+  next_run TIMESTAMPTZ,
+  run_count INT DEFAULT 0,
+  result_summary JSONB,
+  config JSONB,               -- task-specific parameters
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Side task log: every action taken by autonomous agents
+CREATE TABLE side_task_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  task_id UUID REFERENCES side_tasks(id),
+  action TEXT,
+  target TEXT,
+  decision TEXT,
+  detail JSONB,
+  requires_approval BOOLEAN DEFAULT FALSE,
+  approved BOOLEAN,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Daily brief cache
+CREATE TABLE daily_briefs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id),
+  brief_date DATE DEFAULT CURRENT_DATE,
+  generated_by TEXT,          -- 'gemini' | 'claude'
+  content JSONB,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, brief_date)
+);
+
+-- Comms drafts
+CREATE TABLE comms_drafts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id),
+  recipient TEXT,
+  relationship TEXT,
+  tone TEXT,
+  objective TEXT,
+  context_notes TEXT,
+  body TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);</code></pre>
+
+                    <hr class="manifest-hr">
+
+                    <h3 class="manifest-h3">4. INTELLIGENCE ORCHESTRATION</h3>
+                    <p class="manifest-p">Gemini and Claude are not interchangeable. They have distinct roles. The backend routes work to their respective strengths.</p>
+                    
+                    <h4 class="manifest-h4">Model Assignment</h4>
+                    <table class="manifest-table">
+                      <thead>
+                        <tr>
+                          <th>Task</th>
+                          <th>Model</th>
+                          <th>Reason</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>Daily brief synthesis</td>
+                          <td>Gemini 2.0 Flash</td>
+                          <td>Speed, breadth, pattern aggregation</td>
+                        </tr>
+                        <tr>
+                          <td>Email parsing + classification</td>
+                          <td>Gemini 2.0 Flash</td>
+                          <td>Volume processing, structured output</td>
+                        </tr>
+                        <tr>
+                          <td>Strategic reasoning, investor comms</td>
+                          <td>Claude Sonnet</td>
+                          <td>Depth, nuance, language precision</td>
+                        </tr>
+                        <tr>
+                          <td>Draft writing, rewriting, tone</td>
+                          <td>Claude Sonnet</td>
+                          <td>Best-in-class long-form generation</td>
+                        </tr>
+                        <tr>
+                          <td>Horizon analysis + sequencing</td>
+                          <td>Claude Sonnet</td>
+                          <td>Multi-step strategic logic</td>
+                        </tr>
+                        <tr>
+                          <td>Side task decision trees</td>
+                          <td>Gemini 2.0 Flash</td>
+                          <td>Rapid categorization at scale</td>
+                        </tr>
+                        <tr>
+                          <td>Sensitive context / personal</td>
+                          <td>Claude Sonnet</td>
+                          <td>Judgment on edge cases</td>
+                        </tr>
+                      </tbody>
+                    </table>
+
+                    <h4 class="manifest-h4">Orchestration Engine: <code>/routes/orchestrate.py</code></h4>
+                    <pre class="manifest-code"><code>def route_to_model(task_type, payload):
+    """
+    Routes task to Claude or Gemini based on task type.
+    Never hardcoded thresholds — all logic driven by task_type registry.
+    """
+    registry = load_task_registry()  # from Supabase config table
+    model = registry[task_type]['model']
+    
+    if model == 'claude':
+        return call_claude(payload, registry[task_type]['system_prompt'])
+    elif model == 'gemini':
+        return call_gemini(payload, registry[task_type]['system_prompt'])
+    elif model == 'both':
+        return call_both_and_merge(payload, registry[task_type])</code></pre>
+                    <p class="manifest-p">The system prompt for each task type lives in Supabase, not in code. Changing a system prompt does not require a deploy.</p>
+
+                    <hr class="manifest-hr">
+
+                    <h3 class="manifest-h3">5. DAILY BRIEF ENGINE</h3>
+                    <p class="manifest-p">The daily brief is generated once per day, at operator's configured time (default: 06:00 Pacific), by a Railway scheduled job. It is <strong>not</strong> generated on page load — it is pre-computed, cached in <code>daily_briefs</code>, and served instantly.</p>
+                    
+                    <h4 class="manifest-h4">Brief Structure (JSONB schema)</h4>
+                    <pre class="manifest-code"><code>{
+  "date": "2026-06-12",
+  "generated_at": "06:00:22",
+  "model": "gemini",
+  "sections": {
+    "wellness": {
+      "day_of_week": "Friday",
+      "focus": "Cardio / Flush",
+      "training": "Steady-State Swim (Moderate Pace)",
+      "duration": "40–50 Min",
+      "sauna": "None — let skin breathe",
+      "hydration": "2.5 Liters",
+      "nutrition_type": "Swimming & Rest Day",
+      "nutrition": "HIGH protein · LOW carbs · MODERATE healthy fats"
+    },
+    "warnings": [
+      {
+        "type": "deadline",
+        "urgency": "critical",
+        "message": "ARC Gallery deadline in 8 days",
+        "source": "horizon_items"
+      }
+    ],
+    "horizon_due_soon": [...],
+    "email_signals": [...],
+    "financial_flags": [...],
+    "user_addons": [...]
+  },
+  "synthesis": "Narrative paragraph — written by Gemini, augmented by Claude if critical items detected"
+}</code></pre>
+
+                    <h4 class="manifest-h4">Wellness Data Source</h4>
+                    <p class="manifest-p">Wellness data comes from the operator's Excel schedule — parsed once, stored in Supabase as a <code>wellness_schedule</code> config table. Not hardcoded. When the schedule changes, the operator uploads a new file through the dashboard settings, and the parser re-populates the table.</p>
+                    <pre class="manifest-code"><code>CREATE TABLE wellness_schedule (
+  user_id UUID REFERENCES users(id),
+  day_index INT,   -- 0=Sun, 1=Mon...6=Sat
+  focus TEXT,
+  training TEXT,
+  duration TEXT,
+  sauna TEXT,
+  hydration TEXT,
+  nutrition_type TEXT,
+  nutrition TEXT
+);</code></pre>
+
+                    <hr class="manifest-hr">
+
+                    <h3 class="manifest-h3">6. SIDE TASK AGENTS</h3>
+                    <p class="manifest-p">Side tasks are autonomous backend processes that run on a schedule, take actions in the world, log everything, and surface results to the operator through the dashboard. They are <strong>never destructive without explicit approval</strong>.</p>
+                    
+                    <h4 class="manifest-h4">Architecture</h4>
+                    <p class="manifest-p">Every side task follows the same contract:</p>
+                    <pre class="manifest-code"><code>1. SCAN     — read data (email, calendar, web, file)
+2. CLASSIFY — use AI to categorize each item
+3. DECIDE   — apply rules to generate proposed actions
+4. LOG      — write every decision to side_task_log
+5. GATE     — anything requiring human approval sets requires_approval=TRUE
+6. REPORT   — summary surfaced on dashboard under "Side Tasks" panel
+7. EXECUTE  — only approved actions are executed</code></pre>
+
+                    <h4 class="manifest-h4">Illustrative Example: Email Hygiene Agent</h4>
+                    <p class="manifest-p"><code>task_key: email_unsubscribe_sweep</code></p>
+                    <p class="manifest-p"><strong>What it does:</strong> The agent connects to Gmail via OAuth service account, scans all commercial/newsletter emails, and proposes unsubscribe actions based on engagement history. It never unsubscribes anything without the operator seeing it.</p>
+                    
+                    <h4 class="manifest-h4">Decision tree</h4>
+                    <pre class="manifest-code"><code>FOR EACH email thread:
+  IF sender_category == 'financial'    → DO NOTHING, flag as protected
+  IF sender_category == 'personal'     → DO NOTHING, flag as protected
+  IF sender_category == 'legal'        → DO NOTHING, flag as protected
+  IF sender_category == 'investor'     → DO NOTHING, flag as protected
+  
+  IF sender_category == 'commercial':
+    IF never_opened == TRUE:
+      → PROPOSE: unsubscribe immediately
+      → requires_approval = FALSE  (auto-approve tier)
+      → LOG action
+    IF opened_at_least_once == TRUE:
+      → PROPOSE: ask operator "Unsubscribe from [sender]?"
+      → requires_approval = TRUE
+      → SURFACE to dashboard for one-click decision
+    IF opened_recently (< 30 days):
+      → DO NOTHING, flag as 'engaged'</code></pre>
+
+                    <p class="manifest-p"><strong>Categories determined by Gemini:</strong> Sender domain patterns, Subject line keywords, First-line content scan, Header <code>List-Unsubscribe</code> presence.</p>
+                    
+                    <h4 class="manifest-h4">Output to dashboard</h4>
+                    <pre class="manifest-code"><code>{
+  "task_key": "email_unsubscribe_sweep",
+  "last_run": "2026-06-12T06:15:00",
+  "summary": {
+    "scanned": 847,
+    "auto_unsubscribed": 212,
+    "awaiting_approval": 34,
+    "protected": 156,
+    "engaged_kept": 445
+  },
+  "pending_decisions": [
+    {
+      "sender": "Architectural Digest Newsletter",
+      "opened_count": 3,
+      "last_opened": "2026-04-10",
+      "proposed_action": "unsubscribe",
+      "approval_id": "uuid"
+    }
+  ]
+}</code></pre>
+
+                    <h4 class="manifest-h4">Other Side Task Slots</h4>
+                    <pre class="manifest-code"><code>task_key: invoice_followup_agent
+  → Scans emails for invoice keywords + unpaid signals
+  → Drafts follow-up emails, queues for operator approval before send
+  → Never sends without explicit approval
+
+task_key: deadline_horizon_sync
+  → Daily: reads calendar + email for new date mentions
+  → Proposes new horizon_items if deadline detected
+  → Operator approves additions
+
+task_key: investor_signal_monitor
+  → Monitors email threads with tracked investor names
+  → Flags new activity, sentiment shift, long silence (> N days)
+  → Surfaces alert on dashboard
+
+task_key: academic_deadline_tracker
+  → Monitors CFPs, conference sites for tracked venues
+  → Checks submission portals for deadline changes
+  → Surfaces to horizon automatically
+
+task_key: nexushestia_uptime_watch
+  → Pings all nexushestia.com subdomains every 15 min
+  → Alerts if any return non-200
+  → Logs to side_task_log
+
+task_key: wellness_checkin_prompt
+  → At configured morning time: sends Athena a prompt with today's wellness plan
+  → Pre-populates daily brief wellness section
+  → No action — information only</code></pre>
+
+                    <hr class="manifest-hr">
+
+                    <h3 class="manifest-h3">7. API ROUTES</h3>
+                    <pre class="manifest-code"><code>POST   /auth/login                 — authenticate
+POST   /auth/logout                — end session
+GET    /auth/verify                — check session
+
+GET    /api/daily-brief            — serve today's pre-computed brief
+POST   /api/daily-brief/addon      — add item to tomorrow's brief context
+
+GET    /api/horizon                — list all horizon items
+POST   /api/horizon                — create horizon item
+PATCH  /api/horizon/:id            — update
+DELETE /api/horizon/:id            — delete
+
+GET    /api/brief-items            — list active brief items
+POST   /api/brief-items            — create
+PATCH  /api/brief-items/:id        — update (content, urgency, status)
+DELETE /api/brief-items/:id        — delete
+
+GET    /api/timeline/:date         — blocks for a given date
+POST   /api/timeline               — create block
+PATCH  /api/timeline/:id           — update / mark complete
+DELETE /api/timeline/:id           — delete
+
+POST   /api/chat/core              — Athena Core chat (Claude)
+POST   /api/chat/brief             — Brief Orchestrator chat (Claude)
+POST   /api/comms/generate         — generate comms draft (Claude)
+POST   /api/comms/rewrite          — rewrite existing draft (Claude)
+GET    /api/comms/drafts           — list saved drafts
+POST   /api/comms/drafts           — save draft
+
+GET    /api/side-tasks             — list all side tasks + status
+PATCH  /api/side-tasks/:id/toggle  — enable / pause task
+GET    /api/side-tasks/:id/log     — task action log
+POST   /api/side-tasks/:id/approve/:log_id  — approve pending action
+POST   /api/side-tasks/:id/reject/:log_id   — reject pending action
+
+POST   /api/memory/search          — semantic search over message history
+GET    /api/memory/context         — retrieve relevant past context for a prompt
+
+POST   /api/wellness/upload        — upload new Excel schedule, re-parse</code></pre>
+
+                    <hr class="manifest-hr">
+
+                    <h3 class="manifest-h3">8. FRONTEND SPECIFICATION</h3>
+                    <p class="manifest-p"><code>athena.nexushestia.com</code> — static HTML, no build step required. Deployable to Bluehost as flat files.</p>
+                    
+                    <h4 class="manifest-h4">Login Page</h4>
+                    <p class="manifest-p">Full-screen, black ground (#0A0A0A). Centered: intricateNHT.png, then inputs. email + password fields, "ENTER ATHENA" button. POST to /auth/login. No password reset UI.</p>
+                    
+                    <h4 class="manifest-h4">Logo Usage</h4>
+                    <p class="manifest-p"><strong>intricateNHT.png</strong> — topbar left, min-height 36px, links to dashboard root. <strong>reducedNHT.png</strong> — footer only, height 22px.</p>
+                    
+                    <h4 class="manifest-h4">Color System</h4>
+                    <pre class="manifest-code"><code>--black:       #0A0A0A;   /* ground */
+--hot-pink:    #FF2D78;   /* primary accent */
+--magenta:     #E0006E;   /* secondary accent */
+--orange:      #FF6B1A;   /* tertiary accent */
+--red:         #CC0000;   /* warnings / exhibition */
+--text:        #F0EEE8;   /* primary text */
+--text-muted:  rgba(240,238,232,0.55);</code></pre>
+
+                    <h4 class="manifest-h4">JavaScript Architecture</h4>
+                    <p class="manifest-p">No framework. Vanilla JS with fetch API. State held in module-scoped objects. API_BASE is set in a single config.js file.</p>
+
+                    <hr class="manifest-hr">
+
+                    <h3 class="manifest-h3">9. SIDE TASK PANEL — DASHBOARD UI</h3>
+                    <p class="manifest-p">The Side Tasks panel sits after Deployment in the tab strip (Tab 08).</p>
+                    
+                    <h4 class="manifest-h4">New Task Configuration</h4>
+                    <p class="manifest-p">Operator describes a task in natural language. Claude converts it to a structured <code>side_tasks</code> row and presents it for review before insertion.</p>
+
+                    <hr class="manifest-hr">
+
+                    <h3 class="manifest-h3">10. DEPLOYMENT SEQUENCE</h3>
+                    <p class="manifest-p"><strong>Step 1: Railway Backend</strong> (Repository structure with api/, routes/, services/, etc. env variables set on dashboard).<br>
+                    <strong>Step 2: Supabase</strong> (migration SQL, pgvector extension, RLS, insert operator bcrypt record).<br>
+                    <strong>Step 3: Bluehost</strong> (upload frontend/ to athena.nexushestia.com, set config.js).<br>
+                    <strong>Step 4: Scheduler</strong> (Railway cron jobs for daily_brief_job.py and side_task_runner.py).</p>
+
+                    <hr class="manifest-hr">
+
+                    <h3 class="manifest-h3">11. WHAT ANTIGRAVITY MEANS</h3>
+                    <blockquote class="manifest-quote">
+                        Antigravity = net reduction in cognitive gravity per feature deployed.
+                    </blockquote>
+                    <p class="manifest-p">Conventional productivity systems add weight: more dashboards, more apps, more tracking, more inbox management. Athena inverts this. Every layer added reduces the gravitational load on the operator. The system descends toward autonomous action on low-stakes work while elevating the operator's attention to the work only they can do.</p>
+
+                    <hr class="manifest-hr">
+
+                    <h3 class="manifest-h3">12. VERSION CONTROL PROTOCOL</h3>
+                    <p class="manifest-p">All code changes via pull request to main branch, even solo. Never commit secrets. .env is gitignored. Deploy to Railway via git push origin main.</p>
+                    
+                    <hr class="manifest-hr">
+                    
+                    <div class="manifest-footer">
+                        *ATHENA ANTIGRAVITY MANIFEST v1.0*<br>
+                        *Nexus Hestia Technologies · Natasha Bajc · June 2026*<br>
+                        *Provisional Patent Referenced: USPTO 30/056,415*
+                    </div>
                 </div>
             </div>
-            <div class="sovereignty-badge">
-                <i class="fa-solid fa-shield-halved"></i>
-                <span>SOVEREIGNTY GUARDRAIL: ACTIVE</span>
-            </div>
-            <div class="time-widget" id="time-widget">
-                <div class="time-item">
-                    <span class="label">LOCAL</span>
-                    <span class="value" id="local-time">00:00:00</span>
-                </div>
-                <div class="time-item border-left">
-                    <span class="label">BELGRADE</span>
-                    <span class="value" id="belgrade-time">00:00:00</span>
-                </div>
-            </div>
-        </header>
+        </aside>
 
-        <!-- MAIN 4-GRID LAYOUT -->
-        <main class="dashboard-grid">
-
-            <!-- COLUMN 1: ATHENA CORE -->
-            <section class="card athena-core-card">
-                <div class="card-header">
-                    <div class="icon-title">
-                        <i class="fa-solid fa-microphone-lines icon-purple"></i>
-                        <h2>Athena-Core Interface</h2>
-                    </div>
-                    <span class="badge purple">Sovereignty Executive</span>
-                </div>
-                <div class="card-body">
-                    <div class="voice-module">
-                        <p class="section-desc">Mobile dictation optimization & voice-first entry</p>
-                        <div class="wave-container">
-                            <canvas id="waveform-canvas"></canvas>
-                            <button class="mic-btn" id="mic-btn" title="Simulate Voice Input">
-                                <i class="fa-solid fa-microphone"></i>
-                            </button>
-                        </div>
-                        <div class="dictation-input-group">
-                            <input type="text" id="dictation-input" placeholder="Ask Athena anything..." autocomplete="off">
-                            <button class="send-btn" id="send-dictation-btn">
-                                <i class="fa-solid fa-paper-plane"></i>
-                            </button>
-                        </div>
-                        <div class="suggestions">
-                            <span class="suggest-chip" onclick="applySuggestion('What should I focus on today?')">"Today's priorities"</span>
-                            <span class="suggest-chip" onclick="applySuggestion('Status of seed round with Pedja')">"Seed round status"</span>
-                            <span class="suggest-chip" onclick="applySuggestion('ARC show deadline status')">"ARC deadline"</span>
-                        </div>
-
-                        <!-- Athena Response Box -->
-                        <div class="athena-response-box" id="athena-response-box">
-                            <span class="athena-response-label">ATHENA / CLAUDE</span>
-                            <span id="athena-response-text"></span>
-                        </div>
-                    </div>
-
-                    <div class="pending-approvals-module">
-                        <h3><i class="fa-solid fa-user-check"></i> Pending Broadcast Approvals</h3>
-                        <div id="approvals-list" class="approvals-list">
-                            <div class="loading-placeholder">Loading pending items...</div>
-                        </div>
-                    </div>
-
-                    <div class="long-term-goals-module" style="margin-top:20px; border-top:1px solid rgba(255,255,255,0.06); padding-top:16px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                            <h3 style="margin-bottom:0; color:var(--color-success);"><i class="fa-solid fa-vault"></i> Long-Term Goals</h3>
-                            <button onclick="openNewGoalModal()" style="background:rgba(71,200,255,0.12); border:1px solid rgba(71,200,255,0.25); color:#7aaaff; border-radius:4px; padding:2px 8px; font-family:'Space Mono', monospace; font-size:0.7rem; cursor:pointer;"><i class="fa-solid fa-plus"></i> ADD</button>
-                        </div>
-                        <div id="long-term-goals-list" class="goals-list">
-                            <div class="loading-placeholder">Loading goals...</div>
-                        </div>
+        <!-- RIGHT SIDE: MAIN CONTENT -->
+        <div class="main-content">
+            <!-- HEADER -->
+            <header class="app-header">
+                <div class="brand">
+                    <img src="/static/reducedNHT.png" alt="Nexus Hestia Technologies Logo" class="logo-reduced" style="height: 22px; width: auto; object-fit: contain; opacity: 0.85;">
+                    <div class="brand-text">
+                        <h1 style="font-size: 1.15rem; font-family: 'Space Mono', monospace; font-weight: normal; letter-spacing: 0.1em; color: #fff; margin: 0;">ATHENA</h1>
+                        <span class="version-tag" style="font-size: 0.65rem; font-family: 'Space Mono', monospace; background: rgba(255,255,255,0.06); padding: 1px 5px; border-radius: 4px; color: #888;">v2.2</span>
                     </div>
                 </div>
-            </section>
-
-            <!-- COLUMN 2: BRIEF-ORCHESTRATOR -->
-            <section class="card brief-orchestrator-card">
-                <div class="card-header">
-                    <div class="icon-title">
-                        <i class="fa-solid fa-calendar-day icon-blue"></i>
-                        <h2>Brief-Orchestrator</h2>
-                    </div>
-                    <span class="badge blue">State Engine</span>
+                <div class="sovereignty-badge">
+                    <i class="fa-solid fa-shield-halved" style="color:#FF2D78;"></i>
+                    <span>SOVEREIGNTY GUARDRAIL: ACTIVE</span>
                 </div>
-                <div class="card-body">
-                    <div class="brief-summary-box">
-                        <h3>Daily Briefing Synopsis</h3>
-                        <p id="brief-text">Loading latest daily brief from Gemini + Claude...</p>
-                        <!-- Athena synthesis -->
-                        <div id="brief-synthesis" class="athena-response-box" style="margin-top:10px;">
-                            <span class="athena-response-label">ATHENA SYNTHESIS / CLAUDE</span>
-                            <span id="brief-synthesis-text"></span>
+                <div class="time-widget" id="time-widget">
+                    <div class="time-item">
+                        <span class="label">LOCAL</span>
+                        <span class="value" id="local-time">00:00:00</span>
+                    </div>
+                    <div class="time-item border-left">
+                        <span class="label">BELGRADE</span>
+                        <span class="value" id="belgrade-time">00:00:00</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- MAIN 4-GRID LAYOUT -->
+            <main class="dashboard-grid">
+
+                <!-- COLUMN 1: ATHENA CORE -->
+                <section class="card athena-core-card">
+                    <div class="card-header">
+                        <div class="icon-title">
+                            <i class="fa-solid fa-microphone-lines icon-purple"></i>
+                            <h2>Athena-Core Interface</h2>
+                        </div>
+                        <span class="badge purple">Sovereignty Executive</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="voice-module">
+                            <p class="section-desc">Mobile dictation optimization & voice-first entry</p>
+                            <div class="wave-container">
+                                <canvas id="waveform-canvas"></canvas>
+                                <button class="mic-btn" id="mic-btn" title="Simulate Voice Input">
+                                    <i class="fa-solid fa-microphone"></i>
+                                </button>
+                            </div>
+                            <div class="dictation-input-group">
+                                <input type="text" id="dictation-input" placeholder="Ask Athena anything..." autocomplete="off">
+                                <button class="send-btn" id="send-dictation-btn">
+                                    <i class="fa-solid fa-paper-plane"></i>
+                                </button>
+                            </div>
+                            <div class="suggestions">
+                                <span class="suggest-chip" onclick="applySuggestion('What should I focus on today?')">"Today's priorities"</span>
+                                <span class="suggest-chip" onclick="applySuggestion('Status of seed round with Pedja')">"Seed round status"</span>
+                                <span class="suggest-chip" onclick="applySuggestion('ARC show deadline status')">"ARC deadline"</span>
+                            </div>
+
+                            <!-- Athena Response Box -->
+                            <div class="athena-response-box" id="athena-response-box">
+                                <span class="athena-response-label">ATHENA / CLAUDE</span>
+                                <span id="athena-response-text"></span>
+                            </div>
+                        </div>
+
+                        <div class="pending-approvals-module">
+                            <h3><i class="fa-solid fa-user-check"></i> Pending Broadcast Approvals</h3>
+                            <div id="approvals-list" class="approvals-list">
+                                <div class="loading-placeholder">Loading pending items...</div>
+                            </div>
+                        </div>
+
+                        <div class="long-term-goals-module" style="margin-top:20px; border-top:1px solid rgba(255,255,255,0.06); padding-top:16px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                                <h3 style="margin-bottom:0; color:var(--color-success);"><i class="fa-solid fa-vault"></i> Long-Term Goals</h3>
+                                <button onclick="openNewGoalModal()" style="background:rgba(71,200,255,0.12); border:1px solid rgba(71,200,255,0.25); color:#7aaaff; border-radius:4px; padding:2px 8px; font-family:'Space Mono', monospace; font-size:0.7rem; cursor:pointer;"><i class="fa-solid fa-plus"></i> ADD</button>
+                            </div>
+                            <div id="long-term-goals-list" class="goals-list">
+                                <div class="loading-placeholder">Loading goals...</div>
+                            </div>
                         </div>
                     </div>
+                </section>
 
-                    <!-- FIX 5: Today's Priorities from Claude+Gemini -->
-                    <div class="priorities-panel" id="priorities-panel">
-                        <h3><i class="fa-solid fa-bullseye"></i> Today's Priorities — Athena</h3>
-                        <div id="priorities-list">
-                            <div class="loading-placeholder">Coordinating with Gemini + Claude...</div>
+                <!-- COLUMN 2: BRIEF-ORCHESTRATOR -->
+                <section class="card brief-orchestrator-card">
+                    <div class="card-header">
+                        <div class="icon-title">
+                            <i class="fa-solid fa-calendar-day icon-blue"></i>
+                            <h2>Brief-Orchestrator</h2>
                         </div>
+                        <span class="badge blue">State Engine</span>
                     </div>
+                    <div class="card-body">
+                        <div class="brief-summary-box">
+                            <h3>Daily Briefing Synopsis</h3>
+                            <p id="brief-text">Loading latest daily brief from Gemini + Claude...</p>
+                            <!-- Athena synthesis -->
+                            <div id="brief-synthesis" class="athena-response-box" style="margin-top:10px;">
+                                <span class="athena-response-label">ATHENA SYNTHESIS / CLAUDE</span>
+                                <span id="brief-synthesis-text"></span>
+                            </div>
+                        </div>
 
-                    <!-- FIX 4: Feedback loop for tomorrow's brief -->
-                    <div class="feedback-module">
-                        <h3><i class="fa-solid fa-rotate-right"></i> Brief Feedback → Tomorrow</h3>
-                        <div class="feedback-input-row">
-                            <input type="text" class="feedback-input" id="feedback-input"
-                                placeholder="Tell Athena what was missed or wrong today...">
-                            <button class="btn-feedback" onclick="submitFeedback()">SEND</button>
+                        <!-- Priorities from Claude+Gemini -->
+                        <div class="priorities-panel" id="priorities-panel">
+                            <h3><i class="fa-solid fa-bullseye"></i> Today's Priorities — Athena</h3>
+                            <div id="priorities-list">
+                                <div class="loading-placeholder">Coordinating with Gemini + Claude...</div>
+                            </div>
                         </div>
-                        <div class="feedback-sent" id="feedback-sent">
-                            <i class="fa-solid fa-check"></i> Feedback logged — Gemini + Claude will incorporate tomorrow.
-                        </div>
-                    </div>
 
-                    <div class="timeline-module">
-                        <div class="tab-header" style="display:flex; gap:16px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:8px; margin-bottom:12px;">
-                            <h3 class="tab-btn active" onclick="switchBriefTab('timeline')" id="tab-timeline" style="cursor:pointer; margin-bottom:0; color:#7aaaff; font-size:0.78rem;"><i class="fa-solid fa-clock-rotate-left"></i> Timeline Blocks</h3>
-                            <h3 class="tab-btn" onclick="switchBriefTab('horizon')" id="tab-horizon" style="cursor:pointer; margin-bottom:0; color:var(--text-secondary); font-size:0.78rem;"><i class="fa-solid fa-cloud-sun"></i> On the Horizon</h3>
+                        <!-- Feedback loop for tomorrow's brief -->
+                        <div class="feedback-module">
+                            <h3><i class="fa-solid fa-rotate-right"></i> Brief Feedback → Tomorrow</h3>
+                            <div class="feedback-input-row">
+                                <input type="text" class="feedback-input" id="feedback-input"
+                                    placeholder="Tell Athena what was missed or wrong today...">
+                                <button class="btn-feedback" onclick="submitFeedback()">SEND</button>
+                            </div>
+                            <div class="feedback-sent" id="feedback-sent">
+                                <i class="fa-solid fa-check"></i> Feedback logged — Gemini + Claude will incorporate tomorrow.
+                            </div>
                         </div>
-                        
-                        <!-- Timeline tab content -->
-                        <div class="tab-content" id="content-timeline">
-                            <div class="timeline">
-                                <div class="timeline-item active" id="state-routine">
-                                    <div class="timeline-badge routine"><i class="fa-solid fa-book-open"></i></div>
-                                    <div class="timeline-content">
-                                        <div class="time-header">
-                                            <h4>Routine Block <i class="fa-solid fa-pen-to-square edit-state-btn" onclick="openStateModal('routine_block')" style="cursor:pointer; font-size:0.75rem; color:#888; margin-left:6px;" title="Edit Block"></i></h4>
-                                            <span class="time-pill" id="routine-time">07:00 - 09:00 AM</span>
+
+                        <div class="timeline-module">
+                            <div class="tab-header" style="display:flex; gap:16px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:8px; margin-bottom:12px;">
+                                <h3 class="tab-btn active" onclick="switchBriefTab('timeline')" id="tab-timeline" style="cursor:pointer; margin-bottom:0; color:#7aaaff; font-size:0.78rem;"><i class="fa-solid fa-clock-rotate-left"></i> Timeline Blocks</h3>
+                                <h3 class="tab-btn" onclick="switchBriefTab('horizon')" id="tab-horizon" style="cursor:pointer; margin-bottom:0; color:var(--text-secondary); font-size:0.78rem;"><i class="fa-solid fa-cloud-sun"></i> On the Horizon</h3>
+                            </div>
+                            
+                            <!-- Timeline tab content -->
+                            <div class="tab-content" id="content-timeline">
+                                <div class="timeline">
+                                    <div class="timeline-item active" id="state-routine">
+                                        <div class="timeline-badge routine"><i class="fa-solid fa-book-open"></i></div>
+                                        <div class="timeline-content">
+                                            <div class="time-header">
+                                                <h4>Routine Block <i class="fa-solid fa-pen-to-square edit-state-btn" onclick="openStateModal('routine_block')" style="cursor:pointer; font-size:0.75rem; color:#888; margin-left:6px;" title="Edit Block"></i></h4>
+                                                <span class="time-pill" id="routine-time">07:00 - 09:00 AM</span>
+                                            </div>
+                                            <p class="title" id="routine-title">Denis + Mama Exam Prep</p>
+                                            <span class="status-indicator success" id="routine-status">Active Daily Loop</span>
                                         </div>
-                                        <p class="title" id="routine-title">Denis + Mama Exam Prep</p>
-                                        <span class="status-indicator success" id="routine-status">Active Daily Loop</span>
+                                    </div>
+                                    <div class="timeline-item" id="state-target">
+                                        <div class="timeline-badge target"><i class="fa-solid fa-graduation-cap"></i></div>
+                                        <div class="timeline-content">
+                                            <div class="time-header">
+                                                <h4>Target Block <i class="fa-solid fa-pen-to-square edit-state-btn" onclick="openStateModal('target_block')" style="cursor:pointer; font-size:0.75rem; color:#888; margin-left:6px;" title="Edit Block"></i></h4>
+                                                <span class="time-pill" id="target-time">—</span>
+                                            </div>
+                                            <p class="title" id="target-title">—</p>
+                                            <span class="status-indicator warning" id="target-status">In Progress</span>
+                                        </div>
+                                    </div>
+                                    <div class="timeline-item" id="state-anchor">
+                                        <div class="timeline-badge anchor"><i class="fa-solid fa-seedling"></i></div>
+                                        <div class="timeline-content">
+                                            <div class="time-header">
+                                                <h4>Anchor Block <i class="fa-solid fa-pen-to-square edit-state-btn" onclick="openStateModal('anchor_block')" style="cursor:pointer; font-size:0.75rem; color:#888; margin-left:6px;" title="Edit Block"></i></h4>
+                                                <span class="time-pill" id="anchor-time">—</span>
+                                            </div>
+                                            <p class="title" id="anchor-title">—</p>
+                                            <span class="status-indicator info" id="anchor-status">Scheduled</span>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="timeline-item" id="state-target">
-                                    <div class="timeline-badge target"><i class="fa-solid fa-graduation-cap"></i></div>
-                                    <div class="timeline-content">
-                                        <div class="time-header">
-                                            <h4>Target Block <i class="fa-solid fa-pen-to-square edit-state-btn" onclick="openStateModal('target_block')" style="cursor:pointer; font-size:0.75rem; color:#888; margin-left:6px;" title="Edit Block"></i></h4>
-                                            <span class="time-pill" id="target-time">—</span>
-                                        </div>
-                                        <p class="title" id="target-title">—</p>
-                                        <span class="status-indicator warning" id="target-status">In Progress</span>
-                                    </div>
+                            </div>
+                            
+                            <!-- Horizon tab content -->
+                            <div class="tab-content" id="content-horizon" style="display:none;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; margin-top:4px;">
+                                    <span style="font-size:0.75rem; color:var(--text-secondary);">Upcoming events & future tasks</span>
+                                    <button onclick="openNewHorizonModal()" style="background:rgba(255,107,53,0.12); border:1px solid rgba(255,107,53,0.25); color:var(--color-warning); border-radius:4px; padding:2px 8px; font-family:'Space Mono', monospace; font-size:0.7rem; cursor:pointer;"><i class="fa-solid fa-plus"></i> ADD</button>
                                 </div>
-                                <div class="timeline-item" id="state-anchor">
-                                    <div class="timeline-badge anchor"><i class="fa-solid fa-seedling"></i></div>
-                                    <div class="timeline-content">
-                                        <div class="time-header">
-                                            <h4>Anchor Block <i class="fa-solid fa-pen-to-square edit-state-btn" onclick="openStateModal('anchor_block')" style="cursor:pointer; font-size:0.75rem; color:#888; margin-left:6px;" title="Edit Block"></i></h4>
-                                            <span class="time-pill" id="anchor-time">—</span>
-                                        </div>
-                                        <p class="title" id="anchor-title">—</p>
-                                        <span class="status-indicator info" id="anchor-status">Scheduled</span>
-                                    </div>
+                                <div id="horizon-events-list" class="goals-list">
+                                    <div class="loading-placeholder">Loading upcoming events...</div>
                                 </div>
                             </div>
                         </div>
-                        
-                        <!-- Horizon tab content -->
-                        <div class="tab-content" id="content-horizon" style="display:none;">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; margin-top:4px;">
-                                <span style="font-size:0.75rem; color:var(--text-secondary);">Upcoming events & future tasks</span>
-                                <button onclick="openNewHorizonModal()" style="background:rgba(255,107,53,0.12); border:1px solid rgba(255,107,53,0.25); color:var(--color-warning); border-radius:4px; padding:2px 8px; font-family:'Space Mono', monospace; font-size:0.7rem; cursor:pointer;"><i class="fa-solid fa-plus"></i> ADD</button>
-                            </div>
-                            <div id="horizon-events-list" class="goals-list">
-                                <div class="loading-placeholder">Loading upcoming events...</div>
-                            </div>
-                        </div>
                     </div>
-                </div>
-            </section>
+                </section>
 
-            <!-- COLUMN 3: COMMS-DRAFT-ENGINE (FIX 1, 2, 3) -->
-            <section class="card comms-draft-card">
-                <div class="card-header">
-                    <div class="icon-title">
-                        <i class="fa-solid fa-paperclip icon-teal"></i>
-                        <h2>Comms-Draft-Engine</h2>
+                <!-- COLUMN 3: COMMS-DRAFT-ENGINE -->
+                <section class="card comms-draft-card">
+                    <div class="card-header">
+                        <div class="icon-title">
+                            <i class="fa-solid fa-paperclip icon-teal"></i>
+                            <h2>Comms-Draft-Engine</h2>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <button onclick="openNewDraftModal()" style="background:rgba(100,200,180,0.15); border:1px solid rgba(100,200,180,0.3); color:#64c8b4; border-radius:4px; padding:3px 8px; font-family:'Space Mono', monospace; font-size:0.7rem; cursor:pointer; display:flex; align-items:center; gap:4px;" title="Manually create new draft"><i class="fa-solid fa-plus"></i> NEW</button>
+                            <span class="badge teal">Headless Loop</span>
+                        </div>
                     </div>
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <button onclick="openNewDraftModal()" style="background:rgba(100,200,180,0.15); border:1px solid rgba(100,200,180,0.3); color:#64c8b4; border-radius:4px; padding:3px 8px; font-family:'Space Mono', monospace; font-size:0.7rem; cursor:pointer; display:flex; align-items:center; gap:4px;" title="Manually create new draft"><i class="fa-solid fa-plus"></i> NEW</button>
-                        <span class="badge teal">Headless Loop</span>
+                    <div class="card-body">
+                        <div class="section-info">
+                            <p>Edit drafts freely before approval. Rejected drafts ask if they should repeat tomorrow — otherwise removed.</p>
+                        </div>
+                        <div class="drafts-container" id="drafts-container">
+                            <div class="loading-placeholder">Loading drafts...</div>
+                        </div>
                     </div>
-                </div>
-                <div class="card-body">
-                    <div class="section-info">
-                        <p>Edit drafts freely before approval. Rejected drafts ask if they should repeat tomorrow — otherwise removed.</p>
-                    </div>
-                    <div class="drafts-container" id="drafts-container">
-                        <div class="loading-placeholder">Loading drafts...</div>
-                    </div>
-                </div>
-            </section>
+                </section>
 
-            <!-- COLUMN 4: DEPLOYMENT-DEVOPS -->
-            <section class="card devops-card">
-                <div class="card-header">
-                    <div class="icon-title">
-                        <i class="fa-solid fa-server icon-amber"></i>
-                        <h2>Deployment-DevOps</h2>
+                <!-- COLUMN 4: DEPLOYMENT-DEVOPS -->
+                <section class="card devops-card">
+                    <div class="card-header">
+                        <div class="icon-title">
+                            <i class="fa-solid fa-server icon-amber"></i>
+                            <h2>Deployment-DevOps</h2>
+                        </div>
+                        <span class="badge amber">Pipeline & Infra</span>
                     </div>
-                    <span class="badge amber">Pipeline & Infra</span>
-                </div>
-                <div class="card-body">
-                    <div class="telemetry-summary">
-                        <div class="tel-box">
-                            <span class="tel-label">SUPABASE</span>
-                            <span class="tel-value success-text" id="tel-supabase">CONNECTED</span>
-                        </div>
-                        <div class="tel-box">
-                            <span class="tel-label">LATENCY</span>
-                            <span class="tel-value" id="tel-latency">12ms</span>
-                        </div>
-                        <div class="tel-box">
-                            <span class="tel-label">BEHAVIORAL TEL</span>
-                            <span class="tel-value danger-text" id="tel-behavioral">STRIPPED</span>
-                        </div>
-                    </div>
-                    <div class="chart-container">
-                        <div class="chart-header">
-                            <h3>Connection Latency History (ms)</h3>
-                            <span class="chart-status"><i class="fa-solid fa-circle-nodes"></i> Zero Tracking Telemetry Asserted</span>
-                        </div>
-                        <div class="simulated-chart" id="latency-chart">
-                            <div class="chart-bar" style="height:48%"><span>12ms</span></div>
-                            <div class="chart-bar" style="height:56%"><span>14ms</span></div>
-                            <div class="chart-bar" style="height:44%"><span>11ms</span></div>
-                            <div class="chart-bar" style="height:60%"><span>15ms</span></div>
-                            <div class="chart-bar" style="height:48%"><span>12ms</span></div>
-                            <div class="chart-bar" style="height:52%"><span>13ms</span></div>
-                            <div class="chart-bar active" style="height:48%"><span>12ms</span></div>
-                        </div>
-                    </div>
-                    <div class="devops-git-workspace">
-                        <h3><i class="fa-solid fa-code-branch"></i> Repository Staging Build</h3>
-                        <div class="workspace-list">
-                            <div class="workspace-item">
-                                <span class="repo-name">NHT-Athena</span>
-                                <span class="repo-status success-text"><i class="fa-solid fa-circle-check"></i> v2.2 Live</span>
+                    <div class="card-body">
+                        <div class="telemetry-summary">
+                            <div class="tel-box">
+                                <span class="tel-label">SUPABASE</span>
+                                <span class="tel-value success-text" id="tel-supabase">CONNECTED</span>
                             </div>
-                            <div class="workspace-item">
-                                <span class="repo-name">technosomatic-arc-athena</span>
-                                <span class="repo-status success-text"><i class="fa-solid fa-circle-check"></i> Built</span>
+                            <div class="tel-box">
+                                <span class="tel-label">LATENCY</span>
+                                <span class="tel-value" id="tel-latency">12ms</span>
                             </div>
-                            <div class="workspace-item">
-                                <span class="repo-name">Technosomatic-Rendered</span>
-                                <span class="repo-status success-text"><i class="fa-solid fa-circle-check"></i> Built</span>
+                            <div class="tel-box">
+                                <span class="tel-label">BEHAVIORAL TEL</span>
+                                <span class="tel-value danger-text" id="tel-behavioral">STRIPPED</span>
                             </div>
                         </div>
-                    </div>
-                    <div class="env-config-panel">
-                        <h3><i class="fa-solid fa-key"></i> Key Gateways Active</h3>
-                        <div class="keys-grid">
-                            <div class="key-item"><span class="key-name">Anthropic / Claude</span><span class="key-val"><i class="fa-solid fa-check icon-green"></i></span></div>
-                            <div class="key-item" id="google-auth-btn" style="cursor:pointer;" title="Click to authenticate Google Account"><span class="key-name">Gemini / Google</span><span class="key-val"><i class="fa-solid fa-check icon-green"></i></span></div>
-                            <div class="key-item"><span class="key-name">Supabase</span><span class="key-val"><i class="fa-solid fa-check icon-green"></i></span></div>
-                            <div class="key-item"><span class="key-name">Twilio WhatsApp</span><span class="key-val"><i class="fa-solid fa-check icon-green"></i></span></div>
+                        <div class="chart-container">
+                            <div class="chart-header">
+                                  <h3>Connection Latency History (ms)</h3>
+                                  <span class="chart-status"><i class="fa-solid fa-circle-nodes"></i> Zero Tracking Telemetry Asserted</span>
+                            </div>
+                            <div class="simulated-chart" id="latency-chart">
+                                  <div class="chart-bar" style="height:48%"><span>12ms</span></div>
+                                  <div class="chart-bar" style="height:56%"><span>14ms</span></div>
+                                  <div class="chart-bar" style="height:44%"><span>11ms</span></div>
+                                  <div class="chart-bar" style="height:60%"><span>15ms</span></div>
+                                  <div class="chart-bar" style="height:48%"><span>12ms</span></div>
+                                  <div class="chart-bar" style="height:52%"><span>13ms</span></div>
+                                  <div class="chart-bar active" style="height:48%"><span>12ms</span></div>
+                            </div>
+                        </div>
+                        <div class="devops-git-workspace">
+                            <h3><i class="fa-solid fa-code-branch"></i> Repository Staging Build</h3>
+                            <div class="workspace-list">
+                                <div class="workspace-item">
+                                      <span class="repo-name">NHT-Athena</span>
+                                      <span class="repo-status success-text"><i class="fa-solid fa-circle-check"></i> v2.2 Live</span>
+                                </div>
+                                <div class="workspace-item">
+                                      <span class="repo-name">technosomatic-arc-athena</span>
+                                      <span class="repo-status success-text"><i class="fa-solid fa-circle-check"></i> Built</span>
+                                </div>
+                                <div class="workspace-item">
+                                      <span class="repo-name">Technosomatic-Rendered</span>
+                                      <span class="repo-status success-text"><i class="fa-solid fa-circle-check"></i> Built</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="env-config-panel">
+                            <h3><i class="fa-solid fa-key"></i> Key Gateways Active</h3>
+                            <div class="keys-grid">
+                                <div class="key-item"><span class="key-name">Anthropic / Claude</span><span class="key-val"><i class="fa-solid fa-check icon-green"></i></span></div>
+                                <div class="key-item" id="google-auth-btn" style="cursor:pointer;" title="Click to authenticate Google Account"><span class="key-name">Gemini / Google</span><span class="key-val"><i class="fa-solid fa-check icon-green"></i></span></div>
+                                <div class="key-item"><span class="key-name">Supabase</span><span class="key-val"><i class="fa-solid fa-check icon-green"></i></span></div>
+                                <div class="key-item"><span class="key-name">Twilio WhatsApp</span><span class="key-val"><i class="fa-solid fa-check icon-green"></i></span></div>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </section>
-        </main>
+                </section>
+            </main>
 
-        <!-- SYSTEM LOGS -->
-        <footer class="app-footer">
-            <div class="console-header">
-                <div class="console-title">
-                    <i class="fa-solid fa-terminal"></i>
-                    <h2>Athena sovereignty logs & audit trail</h2>
+            <!-- SYSTEM LOGS -->
+            <footer class="app-footer">
+                <div class="console-header">
+                    <div class="console-title">
+                        <i class="fa-solid fa-terminal"></i>
+                        <h2>Athena sovereignty logs & audit trail</h2>
+                    </div>
+                    <div class="console-actions">
+                        <span class="telemetry-guardrail"><i class="fa-solid fa-shield"></i> ZERO Telemetry Tracking Asserted</span>
+                    </div>
                 </div>
-                <div class="console-actions">
-                    <span class="telemetry-guardrail"><i class="fa-solid fa-shield"></i> ZERO Telemetry Tracking Asserted</span>
-                </div>
-            </div>
-            <div class="console-body" id="console-logs"></div>
-        </footer>
+                <div class="console-body" id="console-logs"></div>
+            </footer>
 
-        <div class="footer-branding">
-            <div class="footer-branding-left">
-                <img src="/static/reducedNHT.png" alt="NHT Reduced Logo" class="footer-logo">
-                <span class="footer-copyright">&copy; 2026 NEXUS HESTIA TECHNOLOGIES. ALL RIGHTS RESERVED.</span>
-            </div>
-            <div class="footer-branding-right">
-                <span class="footer-status"><i class="fa-solid fa-circle success-text"></i> CORE SITES ACTIVE</span>
-                <span class="footer-link"><a href="https://nexushestia.com" target="_blank">NEXUSHESTIA.COM</a></span>
+            <!-- FOOTER -->
+            <div class="footer-branding">
+                <div class="footer-branding-left">
+                    <img src="/static/reducedNHT.png" alt="NHT Reduced Logo" class="footer-logo">
+                    <span class="footer-copyright">&copy; 2026 NEXUS HESTIA TECHNOLOGIES. ALL RIGHTS RESERVED.</span>
+                </div>
+                <div class="footer-branding-right">
+                    <span class="footer-status"><i class="fa-solid fa-circle success-text"></i> CORE SITES ACTIVE</span>
+                    <span class="footer-link"><a href="https://nexushestia.com" target="_blank">NEXUSHESTIA.COM</a></span>
+                </div>
             </div>
         </div>
+
     </div>
 
     <!-- TIMELINE STATE EDIT MODAL -->
