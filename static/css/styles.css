@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cormorant+Garamond:ital,wght@0,300..700;1,300..700&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
 
 :root {
     --bg-base: #0A0A0A;
@@ -1460,4 +1460,53 @@ h3 {
     color: #a3c9ff !important;
     box-shadow: 0 0 12px rgba(100, 160, 255, 0.25);
 }
+
+/* ── FONT RE-TYPOGRAPHY UPDATES ── */
+
+/* 1. Brief-Orchestrator Card Font -> Cormorant Garamond */
+.brief-orchestrator-card,
+.brief-orchestrator-card p,
+.brief-orchestrator-card span:not(.athena-response-label):not(.priority-num):not(.chart-status):not(.time-pill):not(.suggest-chip),
+.brief-orchestrator-card li,
+.brief-orchestrator-card div:not(.priorities-panel):not(.timeline-badge):not(.timeline-item):not(.feedback-module) {
+    font-family: 'Cormorant Garamond', serif !important;
+}
+
+/* Keep feedback input clean sans-serif */
+.feedback-input {
+    font-family: var(--font-sans) !important;
+}
+
+/* 2. Comms-Draft-Engine description paragraph -> Space Mono */
+.section-info p {
+    font-family: var(--font-mono) !important; /* Space Mono */
+}
+
+/* 3. All Caps elements -> Bebas Neue */
+.badge,
+.sovereignty-badge,
+.time-item .label,
+.tel-label,
+.athena-response-label,
+.lock-screen-subtitle,
+#lock-submit-btn,
+.footer-copyright,
+.footer-status,
+.footer-link a,
+.timeline-item h4,
+.btn-feedback {
+    font-family: var(--font-display) !important; /* Bebas Neue */
+}
+
+/* Ensure letters fit nicely with Bebas Neue's vertical block style */
+.badge,
+.sovereignty-badge,
+.time-item .label,
+.tel-label,
+.athena-response-label,
+.btn-feedback {
+    letter-spacing: 0.1em;
+    font-weight: 400;
+}
+
 
