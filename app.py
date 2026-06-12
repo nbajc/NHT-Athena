@@ -4,7 +4,7 @@ import random
 import json
 import anthropic
 import google.generativeai as genai
-from flask import Flask, jsonify, request, redirect
+from flask import Flask, jsonify, request, redirect, send_file
 from flask_cors import CORS
 from dotenv import load_dotenv
 import datetime
@@ -1697,6 +1697,14 @@ def post_dictation():
         "response": claude_response,
         "logs": system_logs[-5:]
     })
+
+@app.route("/intricateNHT.png")
+def serve_intricate():
+    return send_file(os.path.join(app.root_path, "intricateNHT.png"))
+
+@app.route("/reducedNHT.png")
+def serve_reduced():
+    return send_file(os.path.join(app.root_path, "reducedNHT.png"))
 
 @app.route("/")
 def index():
