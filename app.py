@@ -118,7 +118,8 @@ else:
 # - http://localhost:5000/api/auth/callback
 SCOPES = [
     'https://www.googleapis.com/auth/calendar.readonly',
-    'https://www.googleapis.com/auth/gmail.readonly'
+    'https://www.googleapis.com/auth/gmail.readonly',
+    'https://www.googleapis.com/auth/spreadsheets.readonly'
 ]
 
 # Helper to load Google Client Config
@@ -1697,6 +1698,149 @@ def post_dictation():
         "response": claude_response,
         "logs": system_logs[-5:]
     })
+
+@app.route("/api/wellness", methods=["GET"])
+def get_wellness():
+    # Return wellness data dynamically from Google Sheet if connected, otherwise fallback to default
+    google_creds = load_google_credentials()
+    fallback_data = {
+        "1": {"focus": "Gym Resistance", "core": "Heavy Upper Body Compound Lifting", "duration": "45 Min", "sauna": "Infrared Sauna (20–30 min post)", "hydration": "2.5 Liters", "nutrition": "HIGH protein · MODERATE complex carbs · LOW-MODERATE anti-inflammatory Omegas", "type": "Gym & EMS Day"},
+        "2": {"focus": "Cardio / Flush", "core": "Steady-State Swim (Moderate Pace)", "duration": "40–50 Min", "sauna": "None — let skin breathe", "hydration": "2.5 Liters", "nutrition": "HIGH protein · LOW carbs targeted around swim · MODERATE healthy fats (avocado, olive oil)", "type": "Swimming & Rest Day"},
+        "3": {"focus": "Aesthetic Day", "core": "RF & Ultrasonic Cavitation + Microneedling", "duration": "Varies", "sauna": "Microneedling (Face/Body) post-RF", "hydration": "3.0 Liters — CRITICAL", "nutrition": "HIGH protein · STRICTLY LOW carbs · MINIMAL fats · Fasted or protein-only pre · ZERO carbs/fats 3–4h post", "type": "Cavitation Day"},
+        "4": {"focus": "Gym Resistance", "core": "Heavy Lower Body Compound Lifting", "duration": "45 Min", "sauna": "Infrared Sauna (20–30 min post)", "hydration": "2.5 Liters", "nutrition": "HIGH protein · MODERATE complex carbs timed 90 min pre-workout · Focus on anti-inflammatory Omegas", "type": "Gym & EMS Day"},
+        "5": {"focus": "Cardio / Flush", "core": "Steady-State Swim (Moderate Pace)", "duration": "40–50 Min", "sauna": "None — let skin breathe", "hydration": "2.5 Liters", "nutrition": "HIGH protein · LOW carbs targeted around swim · MODERATE healthy fats", "type": "Swimming & Rest Day"},
+        "6": {"focus": "Deep Sculpt", "core": "Full Body EMS — Electrical Muscle Stimulation", "duration": "20 Min", "sauna": "None", "hydration": "3.0 Liters — CRITICAL", "nutrition": "HIGH protein · MODERATE complex carbs pre · Fast-digesting protein + simple carb within 45 min post", "type": "Gym & EMS Day"},
+        "0": {"focus": "Rest & Reset", "core": "Complete Systemic Rest — Passive Recovery", "duration": "Full Day", "sauna": "None", "hydration": "2.0 Liters", "nutrition": "HIGH protein · LOW carbs light and targeted · MODERATE healthy fats for hormone optimization", "type": "Swimming & Rest Day"}
+    }
+    
+    if google_creds:
+        try:
+            service = build('sheets', 'v4', credentials=google_creds)
+            spreadsheet_id = "1cWBKR9MXPjbC6_JqasprCnOBKoVCkRc3a9pqfYZvvNk"
+            # Read first sheet
+            meta = service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
+            sheets = [s['properties']['title'] for s in meta['sheets']]
+            
+            # Find a sheet named Wellness, otherwise use the first sheet
+            wellness_sheet = next((s for s in sheets if "wellness" in s.lower()), sheets[0])
+            result = service.spreadsheets().values().get(
+                spreadsheetId=spreadsheet_id, range=f"'{wellness_sheet}'!A1:J50"
+            ).execute()
+            rows = result.get('values', [])
+            
+            if len(rows) > 1:
+                # We have data! Let's parse it.
+                headers = [h.strip().lower() for h in rows[0]]
+                
+                idx_day = next((i for i, h in enumerate(headers) if "day" in h), -1)
+                idx_focus = next((i for i, h in enumerate(headers) if "focus" in h), -1)
+                idx_core = next((i for i, h in enumerate(headers) if "core" in h or "training" in h or "workout" in h), -1)
+                idx_duration = next((i for i, h in enumerate(headers) if "duration" in h or "time" in h), -1)
+                idx_sauna = next((i for i, h in enumerate(headers) if "sauna" in h), -1)
+                idx_hydration = next((i for i, h in enumerate(headers) if "hydration" in h or "water" in h), -1)
+                idx_nutrition = next((i for i, h in enumerate(headers) if "nutrition" in h or "diet" in h or "food" in h), -1)
+                idx_type = next((i for i, h in enumerate(headers) if "type" in h or "category" in h), -1)
+                
+                sheet_data = {}
+                day_map = {
+                    "sunday": "0", "monday": "1", "tuesday": "2", "wednesday": "3", "thursday": "4", "friday": "5", "saturday": "6",
+                    "sun": "0", "mon": "1", "tue": "2", "wed": "3", "thu": "4", "fri": "5", "sat": "6",
+                    "0": "0", "1": "1", "2": "2", "3": "3", "4": "4", "5": "5", "6": "6"
+                }
+                
+                for row in rows[1:]:
+                    if not row:
+                        continue
+                    day_val = row[idx_day].strip().lower() if idx_day != -1 and len(row) > idx_day else ""
+                    day_key = day_map.get(day_val)
+                    if not day_key:
+                        continue
+                        
+                    sheet_data[day_key] = {
+                        "focus": row[idx_focus].strip() if idx_focus != -1 and len(row) > idx_focus else "None",
+                        "core": row[idx_core].strip() if idx_core != -1 and len(row) > idx_core else "None",
+                        "duration": row[idx_duration].strip() if idx_duration != -1 and len(row) > idx_duration else "None",
+                        "sauna": row[idx_sauna].strip() if idx_sauna != -1 and len(row) > idx_sauna else "None",
+                        "hydration": row[idx_hydration].strip() if idx_hydration != -1 and len(row) > idx_hydration else "None",
+                        "nutrition": row[idx_nutrition].strip() if idx_nutrition != -1 and len(row) > idx_nutrition else "None",
+                        "type": row[idx_type].strip() if idx_type != -1 and len(row) > idx_type else "None"
+                    }
+                
+                if len(sheet_data) > 0:
+                    final_data = fallback_data.copy()
+                    final_data.update(sheet_data)
+                    return jsonify({"success": True, "source": "Google Sheets", "wellness": final_data})
+        except Exception as e:
+            print(f"[WELLNESS ERROR] Failed to fetch from Google Sheet: {e}")
+            
+    return jsonify({"success": True, "source": "Fallback (Hardcoded)", "wellness": fallback_data})
+
+@app.route("/api/timeline", methods=["GET"])
+def get_timeline():
+    # Return calendar events dynamically from Google Calendar if connected, otherwise fallback to default
+    google_creds = load_google_credentials()
+    
+    fallback_blocks = [
+        {"id": "tb-0", "time": "06:30", "title": "Morning routine + hydration protocol", "notes": "2.5L water · Check Athena overnight digest"},
+        {"id": "tb-1", "time": "08:00", "title": "GYM — Lower Body Compound", "notes": "45 min · Infrared sauna 20 min post"},
+        {"id": "tb-2", "time": "10:00", "title": "ARC Gallery website build", "notes": "technosomatic-arc-athena.vercel.app · Pull 3 exhibition sites"},
+        {"id": "tb-3", "time": "12:00", "title": "Tobii EyeX SDK investigation", "notes": "Win11 + Game Integration API + C# Unity script"},
+        {"id": "tb-4", "time": "14:00", "title": "Boris Ivanović follow-up", "notes": "Written investment intent confirmation"},
+        {"id": "tb-5", "time": "15:30", "title": "Supabase memory layer debug", "notes": "Verify Railway env vars in dashboard settings"},
+        {"id": "tb-6", "time": "17:00", "title": "PCC class prep + academic writing block", "notes": "TFAP@CAA proposal outline start"},
+        {"id": "tb-7", "time": "19:30", "title": "Review + reset · Athena end-of-day brief", "notes": "Tomorrow's priorities · Overnight context load"}
+    ]
+    
+    if google_creds:
+        try:
+            cal_service = build('calendar', 'v3', credentials=google_creds)
+            from pytz import timezone
+            la_tz = timezone('America/Los_Angeles')
+            now_la = datetime.datetime.now(la_tz)
+            
+            start_of_day = now_la.replace(hour=0, minute=0, second=0, microsecond=0)
+            end_of_day = now_la.replace(hour=23, minute=59, second=59, microsecond=999999)
+            
+            start_iso = start_of_day.isoformat()
+            end_iso = end_of_day.isoformat()
+            
+            events_result = cal_service.events().list(
+                calendarId='primary', 
+                timeMin=start_iso, 
+                timeMax=end_iso, 
+                singleEvents=True, 
+                orderBy='startTime'
+            ).execute()
+            
+            events = events_result.get('items', [])
+            
+            if events:
+                blocks = []
+                for idx, event in enumerate(events):
+                    start = event.get('start', {})
+                    start_dt = start.get('dateTime') or start.get('date')
+                    time_str = "—"
+                    if start_dt:
+                        try:
+                            dt = datetime.datetime.fromisoformat(start_dt)
+                            if dt.tzinfo:
+                                dt = dt.astimezone(la_tz)
+                            time_str = dt.strftime("%H:%M")
+                        except Exception:
+                            if "T" in start_dt:
+                                time_str = start_dt.split("T")[1][:5]
+                                
+                    blocks.append({
+                        "id": event.get('id') or f"cal-{idx}",
+                        "time": time_str,
+                        "title": event.get('summary', 'Untitled Event'),
+                        "notes": event.get('description', '') or ''
+                    })
+                return jsonify({"success": True, "source": "Google Calendar", "blocks": blocks})
+        except Exception as e:
+            print(f"[CALENDAR ERROR] Failed to fetch today's timeline: {e}")
+            
+    return jsonify({"success": True, "source": "Fallback (Hardcoded)", "blocks": fallback_blocks})
 
 @app.route("/intricateNHT.png")
 def serve_intricate():

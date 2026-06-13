@@ -2935,7 +2935,7 @@ function initializeDashboard() {
   fetchTelemetry();
   fetchSystemLogs();
   loadWellnessForToday();
-  loadTimelineChecks();
+  loadTimelineBlocks();
   
   // Set intervals for live updates
   setInterval(fetchTelemetry, 5000);
@@ -3422,19 +3422,36 @@ const wellnessData = {
   0: { focus:'Rest & Reset', core:'Complete Systemic Rest — Passive Recovery', duration:'Full Day', sauna:'None', hydration:'2.0 Liters', nutrition:'HIGH protein · LOW carbs light and targeted · MODERATE healthy fats for hormone optimization', type:'Swimming & Rest Day' }
 };
 
+function renderWellness(d) {
+  if (!d) return;
+  document.getElementById('wellnessTitle').textContent = d.focus.toUpperCase() + ' — ' + (d.core || d.training || '').split('(')[0].trim().toUpperCase();
+  document.getElementById('wCore').textContent = d.core || d.training || '—';
+  document.getElementById('wDuration').textContent = d.duration || '—';
+  document.getElementById('wSauna').textContent = d.sauna || '—';
+  document.getElementById('wHydration').textContent = d.hydration || '—';
+  document.getElementById('wNutrition').textContent = d.nutrition || '—';
+  document.getElementById('wNutritionType').textContent = d.type || d.nutrition_type || '—';
+}
+
 function loadWellnessForToday() {
   const day = new Date().getDay();
-  const d = wellnessData[day];
   const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   document.getElementById('todayDayName').textContent = days[day].toUpperCase();
-  document.getElementById('wellnessTitle').textContent = d.focus.toUpperCase() + ' — ' + d.core.split('(')[0].trim().toUpperCase();
-  document.getElementById('wCore').textContent = d.core;
-  document.getElementById('wDuration').textContent = d.duration;
-  document.getElementById('wSauna').textContent = d.sauna;
-  document.getElementById('wHydration').textContent = d.hydration;
-  document.getElementById('wNutrition').textContent = d.nutrition;
-  document.getElementById('wNutritionType').textContent = d.type;
+
+  athenaFetch('/api/wellness')
+    .then(res => res.json())
+    .then(data => {
+      const wData = data.wellness || wellnessData;
+      const d = wData[day];
+      renderWellness(d);
+    })
+    .catch(err => {
+      console.warn("Using fallback wellness data:", err);
+      const d = wellnessData[day];
+      renderWellness(d);
+    });
 }
+
 
 // ── WARNINGS & ALERTS DYNAMIC UPDATER ────────────────────────────────────────
 function updateWarnings(horizonItems, supabaseStatus) {
@@ -3539,6 +3556,40 @@ function sendTodayToAthena() {
 }
 
 // ── TIMELINE BLOCKS CHECKLIST ────────────────────────────────────────────────
+async function loadTimelineBlocks() {
+  const container = document.getElementById('timelineBlocks');
+  if (!container) return;
+
+  try {
+    const res = await athenaFetch('/api/timeline');
+    const data = await res.json();
+    const blocks = data.blocks || [];
+    
+    if (blocks.length > 0) {
+      container.innerHTML = '';
+      blocks.forEach(b => {
+        const blockEl = document.createElement('div');
+        blockEl.className = 'timeline-block';
+        blockEl.id = b.id;
+        
+        blockEl.innerHTML = `
+          <div class="tl-time">${escapeHtml(b.time || '—')}</div>
+          <div>
+            <div class="tl-title">${escapeHtml(b.title)}</div>
+            ${b.notes ? `<div style="font-size:11px; color:var(--text-dim); margin-top:2px;">${escapeHtml(b.notes)}</div>` : ''}
+          </div>
+          <button class="tl-check" onclick="checkBlock(this, '${b.id}')" title="Mark complete">✓</button>
+        `;
+        container.appendChild(blockEl);
+      });
+    }
+  } catch (e) {
+    console.error("Failed to load dynamic timeline blocks:", e);
+  }
+  
+  loadTimelineChecks();
+}
+
 function loadTimelineChecks() {
   let done = 0;
   const blocks = document.querySelectorAll('.timeline-block');
